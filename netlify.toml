@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build"
+  publish = ".output/public"
+
+[build.environment]
+  NITRO_PRESET = "netlify"
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions-internal/server"
+  status = 200

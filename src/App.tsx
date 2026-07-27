@@ -10,6 +10,9 @@ import Home from "./pages/Home";
 import Onboarding from "./pages/Onboarding";
 import DonorSetup from "./pages/DonorSetup";
 import DonorProfile from "./pages/DonorProfile";
+import BloodRequests from "./pages/BloodRequests";
+import RequestDetail from "./pages/RequestDetail";
+import DemandForecast from "./pages/DemandForecast";
 import AdminDashboard from "./pages/AdminDashboard";
 import { NotFoundPage } from "./pages/NotFoundPage";
 
@@ -54,6 +57,9 @@ export default function App() {
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/donor-setup" element={<DonorSetup />} />
           <Route path="/donors/:id" element={<DonorProfile />} />
+          <Route path="/requests" element={<BloodRequests />} />
+          <Route path="/requests/:id" element={<RequestDetail />} />
+          <Route path="/forecast" element={<DemandForecast />} />
         </Route>
 
         <Route path="/admin" element={<AdminDashboard />} />

@@ -9,6 +9,8 @@ import {
   Loader2,
   AlertCircle,
   Filter,
+  TrendingUp,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -125,8 +127,18 @@ export default function Home() {
             <span className="text-lg">BloodMap AI</span>
           </div>
           <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/requests">
+                <FileText className="w-4 h-4 mr-1" /> Blood Requests
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/forecast">
+                <TrendingUp className="w-4 h-4 mr-1" /> Forecast AI
+              </Link>
+            </Button>
             {profileType === "seeker" && (
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="default" size="sm" className="shadow-glow">
                 <Link to="/donor-setup">Become a donor</Link>
               </Button>
             )}

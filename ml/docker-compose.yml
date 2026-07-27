@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  ml-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bloodmap-ml-service
+    ports:
+      - "8000:8000"
+    environment:
+      - ML_API_KEY=secret-ml-key-change-me
+      - SUPABASE_URL=${SUPABASE_URL:-https://sifwzveymuebfucqtwat.supabase.co}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - MODEL_DIR=/app/models_data
+    volumes:
+      - ./models_data:/app/models_data
+    restart: unless-stopped

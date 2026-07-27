@@ -1,18 +1,16 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Droplet, HeartHandshake, Search, Loader2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/_authenticated/onboarding")({
-  head: () => ({ meta: [{ title: "Choose how you'll help · BloodMap AI" }] }),
-  component: Onboarding,
-});
-
-function Onboarding() {
+export default function Onboarding() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.title = "Choose how you'll help · BloodMap AI";
+  }, []);
 
   async function choose(type: "seeker" | "donor") {
     setLoading(type);
@@ -26,9 +24,9 @@ function Onboarding() {
     if (error) return toast.error(error.message);
     if (type === "seeker") {
       toast.success("Welcome! Finding nearby donors…");
-      navigate({ to: "/home" });
+      navigate("/home");
     } else {
-      navigate({ to: "/donor-setup" });
+      navigate("/donor-setup");
     }
   }
 

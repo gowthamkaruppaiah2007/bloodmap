@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Droplet, MapPin, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,15 +16,10 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 
-export const Route = createFileRoute("/_authenticated/donor-setup")({
-  head: () => ({ meta: [{ title: "Register as donor · BloodMap AI" }] }),
-  component: DonorSetup,
-});
-
 const GROUPS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"] as const;
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-function DonorSetup() {
+export default function DonorSetup() {
   const navigate = useNavigate();
   const [bloodGroup, setBloodGroup] = useState<string>("");
   const [whatsapp, setWhatsapp] = useState("");
@@ -36,6 +31,10 @@ function DonorSetup() {
   const [available, setAvailable] = useState(true);
   const [emergency, setEmergency] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    document.title = "Register as donor · BloodMap AI";
+  }, []);
 
   function toggleDay(d: string) {
     setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
@@ -90,7 +89,7 @@ function DonorSetup() {
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("You're now a registered donor!");
-    navigate({ to: "/home" });
+    navigate("/home");
   }
 
   return (

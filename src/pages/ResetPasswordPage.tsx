@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useNavigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Droplet, Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -7,18 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export const Route = createFileRoute("/reset-password")({
-  ssr: false,
-  head: () => ({
-    meta: [
-      { title: "Reset password · BloodMap AI" },
-      { name: "description", content: "Choose a new password for your BloodMap AI account." },
-    ],
-  }),
-  component: ResetPasswordPage,
-});
-
-function ResetPasswordPage() {
+export default function ResetPasswordPage() {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
   const [hasSession, setHasSession] = useState(false);
@@ -27,6 +16,7 @@ function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    document.title = "Reset password · BloodMap AI";
     // Supabase parses the recovery token from the URL hash and creates a session.
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" || session) {
@@ -50,7 +40,7 @@ function ResetPasswordPage() {
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Password updated. You're signed in.");
-    navigate({ to: "/home" });
+    navigate("/home");
   }
 
   return (

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Droplet, Heart, MapPin, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -8,27 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export const Route = createFileRoute("/auth")({
-  ssr: false,
-  head: () => ({
-    meta: [
-      { title: "Sign in · BloodMap AI" },
-      {
-        name: "description",
-        content: "Log in or create an account to find blood donors near you.",
-      },
-    ],
-  }),
-  component: AuthPage,
-});
-
-function AuthPage() {
+export default function AuthPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<"login" | "register">("login");
 
   useEffect(() => {
+    document.title = "Sign in · BloodMap AI";
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/home" });
+      if (data.session) navigate("/home");
     });
   }, [navigate]);
 
@@ -147,11 +134,11 @@ function LoginForm() {
     if (isAdmin) {
       localStorage.setItem("bloodmap_admin", "1");
       toast.success("Welcome, Administrator");
-      navigate({ to: "/admin" });
+      navigate("/admin");
       return;
     }
     toast.success("Welcome back!");
-    navigate({ to: "/home" });
+    navigate("/home");
   }
 
   async function onForgot(e: React.FormEvent) {
@@ -289,7 +276,7 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
     toast.success("Account created! Welcome to BloodMap AI.");
     // If email confirmation is off, user is already logged in.
     const { data } = await supabase.auth.getSession();
-    if (data.session) navigate({ to: "/onboarding" });
+    if (data.session) navigate("/onboarding");
     else {
       toast.message("Check your email to confirm and then log in.");
       onDone();

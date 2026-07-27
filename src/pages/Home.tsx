@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState, lazy, Suspense } from "react";
 import {
   Droplet,
@@ -26,17 +26,7 @@ import { buildWhatsAppUrl, formatDistance, haversineKm } from "@/lib/distance";
 
 const MapView = lazy(() => import("@/components/MapView"));
 
-export const Route = createFileRoute("/_authenticated/home")({
-  head: () => ({
-    meta: [
-      { title: "Find donors near you · BloodMap AI" },
-      { name: "description", content: "Live map of blood donors near your location." },
-    ],
-  }),
-  component: Home,
-});
-
-function Home() {
+export default function Home() {
   const navigate = useNavigate();
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [donors, setDonors] = useState<Donor[]>([]);
@@ -46,6 +36,7 @@ function Home() {
   const [profileType, setProfileType] = useState<string | null>(null);
 
   useEffect(() => {
+    document.title = "Find donors near you · BloodMap AI";
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
@@ -55,7 +46,7 @@ function Home() {
         .eq("id", u.user.id)
         .maybeSingle();
       if (!p?.user_type) {
-        navigate({ to: "/onboarding" });
+        navigate("/onboarding");
         return;
       }
       setProfileType(p.user_type);
@@ -111,7 +102,7 @@ function Home() {
 
   async function logout() {
     await supabase.auth.signOut();
-    navigate({ to: "/auth" });
+    navigate("/auth");
   }
 
   function searchNearby() {
@@ -278,7 +269,7 @@ function DonorCard({ donor }: { donor: Donor & { distanceKm?: number } }) {
       </div>
       <div className="mt-4 flex gap-2">
         <Button asChild variant="outline" size="sm" className="flex-1">
-          <Link to="/donors/$id" params={{ id: donor.id }}>
+          <Link to={`/donors/${donor.id}`}>
             View details
           </Link>
         </Button>

@@ -1,6 +1,5 @@
-import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   Droplet,
@@ -50,14 +49,6 @@ import {
   ADMIN_EMAIL,
 } from "@/lib/admin.functions";
 
-export const Route = createFileRoute("/admin")({
-  ssr: false,
-  head: () => ({
-    meta: [{ title: "Admin Dashboard · BloodMap AI" }, { name: "robots", content: "noindex" }],
-  }),
-  component: AdminDashboard,
-});
-
 const COLORS = [
   "#ef4444",
   "#f97316",
@@ -71,19 +62,19 @@ const COLORS = [
 
 type Tab = "overview" | "users" | "donors" | "map";
 
-function AdminDashboard() {
+export default function AdminDashboard() {
   const navigate = useNavigate();
-  const router = useRouter();
   const [checking, setChecking] = useState(true);
   const [tab, setTab] = useState<Tab>("overview");
 
   useEffect(() => {
+    document.title = "Admin Dashboard · BloodMap AI";
     (async () => {
       const { data } = await supabase.auth.getUser();
       const email = data.user?.email?.toLowerCase();
       if (email !== ADMIN_EMAIL) {
         toast.error("Admin access required");
-        navigate({ to: "/auth" });
+        navigate("/auth");
         return;
       }
       setChecking(false);
@@ -93,8 +84,7 @@ function AdminDashboard() {
   async function signOut() {
     await supabase.auth.signOut();
     localStorage.removeItem("bloodmap_admin");
-    router.invalidate();
-    navigate({ to: "/auth" });
+    navigate("/auth");
   }
 
   if (checking) {
@@ -144,14 +134,14 @@ function AdminDashboard() {
 }
 
 function OverviewTab() {
-  const fetchStats = useServerFn(adminGetStats);
   const [stats, setStats] = useState<Awaited<ReturnType<typeof adminGetStats>> | null>(null);
 
   useEffect(() => {
-    fetchStats()
+    adminGetStats()
       .then(setStats)
       .catch((e) => toast.error(e.message));
-  }, [fetchStats]);
+  }, []);
+
   if (!stats)
     return (
       <div className="grid place-items-center py-20">
@@ -268,9 +258,6 @@ function downloadCsv(name: string, rows: Record<string, unknown>[]) {
 }
 
 function UsersTab() {
-  const listUsers = useServerFn(adminListUsers);
-  const delUser = useServerFn(adminDeleteUser);
-  const banUser = useServerFn(adminSetUserBan);
   const [users, setUsers] = useState<Awaited<ReturnType<typeof adminListUsers>>>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -278,7 +265,7 @@ function UsersTab() {
   async function load() {
     setLoading(true);
     try {
-      setUsers(await listUsers());
+      setUsers(await adminListUsers());
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -355,7 +342,7 @@ function UsersTab() {
                       onClick={async () => {
                         const banned = !(u.banned_until && new Date(u.banned_until) > new Date());
                         try {
-                          await banUser({ data: { userId: u.id, banned } });
+                          await adminSetUserBan({ userId: u.id, banned });
                           toast.success(banned ? "Disabled" : "Activated");
                           load();
                         } catch (e) {
@@ -376,7 +363,7 @@ function UsersTab() {
                       onClick={async () => {
                         if (!confirm(`Delete ${u.email}?`)) return;
                         try {
-                          await delUser({ data: { userId: u.id } });
+                          await adminDeleteUser({ userId: u.id });
                           toast.success("Deleted");
                           load();
                         } catch (e) {
@@ -405,9 +392,6 @@ function UsersTab() {
 }
 
 function DonorsTab() {
-  const listDonors = useServerFn(adminListDonors);
-  const delDonor = useServerFn(adminDeleteDonor);
-  const toggle = useServerFn(adminToggleDonorAvailability);
   const [donors, setDonors] = useState<Awaited<ReturnType<typeof adminListDonors>>>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -417,7 +401,7 @@ function DonorsTab() {
   async function load() {
     setLoading(true);
     try {
-      setDonors(await listDonors());
+      setDonors(await adminListDonors());
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -535,7 +519,7 @@ function DonorsTab() {
                       title="Toggle availability"
                       onClick={async () => {
                         try {
-                          await toggle({ data: { donorId: d.id, isAvailable: !d.is_available } });
+                          await adminToggleDonorAvailability({ donorId: d.id, isAvailable: !d.is_available });
                           toast.success("Updated");
                           load();
                         } catch (e) {
@@ -556,7 +540,7 @@ function DonorsTab() {
                       onClick={async () => {
                         if (!confirm(`Delete donor ${d.full_name}?`)) return;
                         try {
-                          await delDonor({ data: { donorId: d.id } });
+                          await adminDeleteDonor({ donorId: d.id });
                           toast.success("Deleted");
                           load();
                         } catch (e) {
@@ -585,13 +569,12 @@ function DonorsTab() {
 }
 
 function MapTab() {
-  const listDonors = useServerFn(adminListDonors);
   const [donors, setDonors] = useState<Awaited<ReturnType<typeof adminListDonors>>>([]);
   useEffect(() => {
-    listDonors()
+    adminListDonors()
       .then(setDonors)
       .catch((e) => toast.error(e.message));
-  }, [listDonors]);
+  }, []);
 
   const bounds = useMemo(() => {
     if (!donors.length) return "-180,-85,180,85";

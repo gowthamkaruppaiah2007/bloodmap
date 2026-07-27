@@ -14,15 +14,16 @@ dist-ssr
 .vinxi
 .tanstack/**
 .nitro
-# Environment variables
+*.local
 .env
-.env.*
-!.env.example
+.netlify/
+.vercel/
+.gowtham/
+gowtham/
 
-# Deployment outputs
-.netlify
-.vercel
+# Wrangler / Cloudflare
 .wrangler/
+.dev.vars
 
 # Editor directories and files
 .vscode/*

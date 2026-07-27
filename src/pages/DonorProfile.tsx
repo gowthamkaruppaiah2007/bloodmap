@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { Link, useParams } from "react-router-dom";
 import { useEffect, useState, lazy, Suspense } from "react";
 import {
   ArrowLeft,
@@ -20,13 +20,8 @@ import { buildWhatsAppUrl, formatDistance, haversineKm } from "@/lib/distance";
 
 const MapView = lazy(() => import("@/components/MapView"));
 
-export const Route = createFileRoute("/_authenticated/donors/$id")({
-  head: () => ({ meta: [{ title: "Donor profile · BloodMap AI" }] }),
-  component: DonorProfile,
-});
-
-function DonorProfile() {
-  const { id } = useParams({ from: "/_authenticated/donors/$id" });
+export default function DonorProfile() {
+  const { id } = useParams<{ id: string }>();
   const [donor, setDonor] = useState<Donor | null>(null);
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,6 +30,8 @@ function DonorProfile() {
   const [routing, setRouting] = useState(false);
 
   useEffect(() => {
+    document.title = "Donor profile · BloodMap AI";
+    if (!id) return;
     (async () => {
       const { data, error } = await supabase.rpc("get_donor_detail", { _donor_id: id });
       setLoading(false);

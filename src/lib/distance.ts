@@ -20,3 +20,22 @@ export function buildWhatsAppUrl(phone: string, message: string): string {
   const clean = phone.replace(/[^\d]/g, "");
   return `https://wa.me/${clean}?text=${encodeURIComponent(message)}`;
 }
+
+export function escapeHtml(str: string): string {
+  return str.replace(/[&<>"']/g, (m) => {
+    switch (m) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&#039;";
+      default:
+        return m;
+    }
+  });
+}

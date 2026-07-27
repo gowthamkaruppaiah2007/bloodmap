@@ -82,7 +82,10 @@ export async function adminDeleteDonor(data: { donorId: string }) {
   return { ok: true };
 }
 
-export async function adminToggleDonorAvailability(data: { donorId: string; isAvailable: boolean }) {
+export async function adminToggleDonorAvailability(data: {
+  donorId: string;
+  isAvailable: boolean;
+}) {
   const { error } = await supabaseAdmin
     .from("donors")
     .update({ is_available: data.isAvailable })

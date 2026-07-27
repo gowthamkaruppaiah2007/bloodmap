@@ -2,7 +2,6 @@ import { Link, useParams } from "react-router-dom";
 import { useEffect, useState, lazy, Suspense } from "react";
 import {
   ArrowLeft,
-  Droplet,
   MessageCircle,
   MapPin,
   Clock,
@@ -17,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import type { Donor } from "@/lib/donors";
 import { buildWhatsAppUrl, formatDistance, haversineKm } from "@/lib/distance";
+import Navbar from "@/components/Navbar";
 
 const MapView = lazy(() => import("@/components/MapView"));
 
@@ -46,13 +46,13 @@ export default function DonorProfile() {
 
   if (loading)
     return (
-      <div className="min-h-screen grid place-items-center">
+      <div className="min-h-screen grid place-items-center bg-[var(--gradient-soft)]">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
   if (!donor)
     return (
-      <div className="min-h-screen grid place-items-center text-muted-foreground">
+      <div className="min-h-screen grid place-items-center bg-[var(--gradient-soft)] text-muted-foreground">
         Donor not found.
       </div>
     );
@@ -94,109 +94,108 @@ export default function DonorProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--gradient-soft)]">
-      <header className="sticky top-0 z-20 glass-card rounded-none border-x-0 border-t-0">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-[var(--gradient-soft)] flex flex-col">
+      <Navbar />
+
+      <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-4 flex-1 w-full">
+        <div>
           <Button asChild variant="ghost" size="sm">
             <Link to="/home">
-              <ArrowLeft className="w-4 h-4 mr-1" /> Back
+              <ArrowLeft className="w-4 h-4 mr-1" /> Back to map
             </Link>
           </Button>
-          <div className="flex items-center gap-2 font-bold text-primary">
-            <Droplet className="w-5 h-5 fill-primary" /> BloodMap AI
-          </div>
         </div>
-      </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-8 grid lg:grid-cols-[1fr_1.2fr] gap-6">
-        <section className="glass-card rounded-2xl p-6 md:p-8">
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-2xl gradient-hero flex items-center justify-center text-primary-foreground text-2xl font-bold shadow-glow">
-              {donor.blood_group}
-            </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold">{donor.full_name}</h1>
-              <div className="text-muted-foreground mt-1">
-                {distance != null ? `${formatDistance(distance)} away` : "Distance unknown"}
+        <div className="grid lg:grid-cols-[1fr_1.2fr] gap-6">
+          <section className="glass-card rounded-2xl p-6 md:p-8">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl gradient-hero flex items-center justify-center text-primary-foreground text-2xl font-bold shadow-glow shrink-0">
+                {donor.blood_group}
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-3xl font-bold">{donor.full_name}</h1>
+                <div className="text-xs sm:text-sm text-muted-foreground mt-1">
+                  {distance != null ? `${formatDistance(distance)} away` : "Distance unknown"}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="mt-8 space-y-4">
-            <Row
-              icon={<Phone className="w-4 h-4" />}
-              label="WhatsApp"
-              value={donor.whatsapp_number}
-            />
-            <Row
-              icon={<Calendar className="w-4 h-4" />}
-              label="Available days"
-              value={(donor.available_days || []).join(", ") || "—"}
-            />
-            <Row
-              icon={<Clock className="w-4 h-4" />}
-              label="Available hours"
-              value={`${donor.start_time || "—"} – ${donor.end_time || "—"}`}
-            />
-            <Row
-              icon={<MapPin className="w-4 h-4" />}
-              label="Location"
-              value={`${donor.latitude.toFixed(4)}, ${donor.longitude.toFixed(4)}`}
-            />
-          </div>
+            <div className="mt-8 space-y-4">
+              <Row
+                icon={<Phone className="w-4 h-4" />}
+                label="WhatsApp"
+                value={donor.whatsapp_number}
+              />
+              <Row
+                icon={<Calendar className="w-4 h-4" />}
+                label="Available days"
+                value={(donor.available_days || []).join(", ") || "—"}
+              />
+              <Row
+                icon={<Clock className="w-4 h-4" />}
+                label="Available hours"
+                value={`${donor.start_time || "—"} – ${donor.end_time || "—"}`}
+              />
+              <Row
+                icon={<MapPin className="w-4 h-4" />}
+                label="Location"
+                value={`${donor.latitude.toFixed(4)}, ${donor.longitude.toFixed(4)}`}
+              />
+            </div>
 
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Button asChild size="lg" className="shadow-glow">
-              <a
-                href={buildWhatsAppUrl(donor.whatsapp_number, waMsg)}
-                target="_blank"
-                rel="noreferrer"
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Button asChild size="lg" className="shadow-glow">
+                <a
+                  href={buildWhatsAppUrl(donor.whatsapp_number, waMsg)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <MessageCircle className="w-5 h-5 mr-2" /> Send WhatsApp Request
+                </a>
+              </Button>
+              <Button
+                size="lg"
+                variant={route ? "secondary" : "outline"}
+                onClick={showDirections}
+                disabled={routing}
               >
-                <MessageCircle className="w-5 h-5 mr-2" /> Send request
-              </a>
-            </Button>
-            <Button
-              size="lg"
-              variant={route ? "secondary" : "outline"}
-              onClick={showDirections}
-              disabled={routing}
-            >
-              {routing ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Finding route…
-                </>
-              ) : route ? (
-                <>
-                  <X className="w-5 h-5 mr-2" /> Hide directions
-                </>
-              ) : (
-                <>
-                  <Navigation className="w-5 h-5 mr-2" /> Destination
-                </>
-              )}
-            </Button>
-          </div>
-          {routeInfo && (
-            <div className="mt-3 text-sm text-muted-foreground text-center">
-              Route:{" "}
-              <span className="font-semibold text-foreground">{routeInfo.km.toFixed(1)} km</span> ·{" "}
-              <span className="font-semibold text-foreground">{Math.round(routeInfo.min)} min</span>{" "}
-              by car
+                {routing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Finding route…
+                  </>
+                ) : route ? (
+                  <>
+                    <X className="w-5 h-5 mr-2" /> Hide directions
+                  </>
+                ) : (
+                  <>
+                    <Navigation className="w-5 h-5 mr-2" /> Directions
+                  </>
+                )}
+              </Button>
             </div>
-          )}
-        </section>
-
-        <section className="glass-card rounded-2xl overflow-hidden h-[460px] relative">
-          <Suspense
-            fallback={
-              <div className="absolute inset-0 grid place-items-center">
-                <Loader2 className="w-5 h-5 animate-spin" />
+            {routeInfo && (
+              <div className="mt-3 text-xs sm:text-sm text-muted-foreground text-center">
+                Route:{" "}
+                <span className="font-semibold text-foreground">{routeInfo.km.toFixed(1)} km</span> ·{" "}
+                <span className="font-semibold text-foreground">{Math.round(routeInfo.min)} min</span>{" "}
+                by car
               </div>
-            }
-          >
-            <MapView center={center} donors={[donor]} route={route} />
-          </Suspense>
-        </section>
+            )}
+          </section>
+
+          <section className="glass-card rounded-2xl overflow-hidden h-[340px] sm:h-[460px] relative shadow-md">
+            <Suspense
+              fallback={
+                <div className="absolute inset-0 grid place-items-center">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                </div>
+              }
+            >
+              <MapView center={center} donors={[donor]} route={route} />
+            </Suspense>
+          </section>
+        </div>
       </main>
     </div>
   );
@@ -209,8 +208,8 @@ function Row({ icon, label, value }: { icon: React.ReactNode; label: string; val
         {icon}
       </div>
       <div className="min-w-0">
-        <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
-        <div className="font-medium break-words">{value}</div>
+        <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{label}</div>
+        <div className="font-medium text-sm break-words mt-0.5">{value}</div>
       </div>
     </div>
   );

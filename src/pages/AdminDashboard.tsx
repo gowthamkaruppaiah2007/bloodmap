@@ -519,7 +519,10 @@ function DonorsTab() {
                       title="Toggle availability"
                       onClick={async () => {
                         try {
-                          await adminToggleDonorAvailability({ donorId: d.id, isAvailable: !d.is_available });
+                          await adminToggleDonorAvailability({
+                            donorId: d.id,
+                            isAvailable: !d.is_available,
+                          });
                           toast.success("Updated");
                           load();
                         } catch (e) {

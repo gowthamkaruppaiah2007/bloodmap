@@ -50,7 +50,10 @@ export function rankDonorsFallback(
 ): ScoredDonor[] {
   return donors
     .map((donor) => {
-      const distKm = haversineKm({ lat: targetLat, lng: targetLng }, { lat: donor.latitude, lng: donor.longitude });
+      const distKm = haversineKm(
+        { lat: targetLat, lng: targetLng },
+        { lat: donor.latitude, lng: donor.longitude },
+      );
       const compatible = isBloodCompatible(donor.blood_group, recipientBloodGroup);
       const exactMatch = donor.blood_group === recipientBloodGroup;
 
@@ -187,7 +190,10 @@ export async function matchDonorsForRequest(params: {
           .sort((a, b) => b.matchScore - a.matchScore);
       }
     } catch (err) {
-      console.warn("[ML Service] ML endpoint unreachable, falling back to deterministic ranker:", err);
+      console.warn(
+        "[ML Service] ML endpoint unreachable, falling back to deterministic ranker:",
+        err,
+      );
     }
   }
 
@@ -294,6 +300,7 @@ export async function logPrediction(params: {
     await supabase.from("ml_predictions").insert({
       model_name: params.modelName,
       model_version: params.modelVersion,
+      request_type: "donor_match",
       input_hash: params.inputHash,
       output: params.output as unknown as import("@/integrations/supabase/types").Json,
       latency_ms: params.latencyMs,

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
+import Navbar from "@/components/Navbar";
 
 const GROUPS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"] as const;
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -103,15 +104,14 @@ export default function DonorSetup() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--gradient-soft)] py-10 px-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-2 text-primary font-bold mb-2">
-          <Droplet className="w-5 h-5 fill-primary" /> BloodMap AI
-        </div>
-        <h1 className="text-3xl md:text-4xl font-bold">Donor registration</h1>
-        <p className="text-muted-foreground mt-2">Tell us how and when people can reach you.</p>
+    <div className="min-h-screen bg-[var(--gradient-soft)] flex flex-col">
+      <Navbar />
 
-        <form onSubmit={onSubmit} className="glass-card rounded-2xl p-6 md:p-8 mt-8 space-y-6">
+      <main className="max-w-2xl mx-auto px-4 py-8 flex-1 w-full">
+        <h1 className="text-2xl sm:text-4xl font-bold">Donor registration</h1>
+        <p className="text-muted-foreground text-sm mt-1">Tell us how and when people can reach you.</p>
+
+        <form onSubmit={onSubmit} className="glass-card rounded-2xl p-6 md:p-8 mt-6 space-y-6">
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Blood group</Label>
@@ -146,9 +146,9 @@ export default function DonorSetup() {
             <button
               type="button"
               onClick={fetchLocation}
-              className="w-full rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 flex items-center gap-3 hover:bg-primary/10 transition"
+              className="w-full rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 flex items-center gap-3 hover:bg-primary/10 transition text-left"
             >
-              <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">
                 {locLoading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : coords ? (
@@ -157,11 +157,11 @@ export default function DonorSetup() {
                   <MapPin className="w-5 h-5" />
                 )}
               </div>
-              <div className="text-left">
-                <div className="font-medium">
+              <div className="min-w-0">
+                <div className="font-medium text-sm">
                   {coords ? "Location captured" : "Share GPS location"}
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-xs text-muted-foreground truncate">
                   {coords
                     ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`
                     : "Tap to allow location access"}
@@ -231,8 +231,8 @@ export default function DonorSetup() {
 
           <div className="flex items-center justify-between rounded-xl bg-muted/50 p-4">
             <div>
-              <div className="font-medium">Currently available</div>
-              <div className="text-sm text-muted-foreground">Pause to hide from search.</div>
+              <div className="font-medium text-sm">Currently available</div>
+              <div className="text-xs text-muted-foreground">Pause to hide from search.</div>
             </div>
             <Switch checked={available} onCheckedChange={setAvailable} />
           </div>
@@ -240,6 +240,7 @@ export default function DonorSetup() {
           <div className="space-y-2">
             <Label htmlFor="ec">Emergency contact (optional)</Label>
             <Input
+              id="ec"
               placeholder="Backup phone or name"
               value={emergency}
               onChange={(e) => setEmergency(e.target.value)}
@@ -251,7 +252,7 @@ export default function DonorSetup() {
             Save and continue
           </Button>
         </form>
-      </div>
+      </main>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import type L from "leaflet";
 import { useEffect, useRef } from "react";
 import type { Donor } from "@/lib/donors";
-import { escapeHtml, formatDistance, haversineKm } from "@/lib/distance";
+import { formatDistance, haversineKm } from "@/lib/distance";
 
 export type MapDonor = Donor & { distanceKm?: number };
 

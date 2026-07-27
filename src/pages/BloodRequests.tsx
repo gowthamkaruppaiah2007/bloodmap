@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Droplet,
@@ -9,9 +9,12 @@ import {
   Loader2,
   CheckCircle2,
   Clock,
-  ArrowLeft,
   Search,
   Filter,
+  MessageCircle,
+  Heart,
+  UserCheck,
+  ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +28,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BLOOD_GROUPS } from "@/lib/donors";
+import { BLOOD_GROUPS, type Donor } from "@/lib/donors";
+import { isBloodCompatible } from "@/lib/ml.functions";
+import { buildWhatsAppUrl } from "@/lib/distance";
+import Navbar from "@/components/Navbar";
 
 export interface BloodRequest {
   id: string;
@@ -47,6 +53,9 @@ export default function BloodRequests() {
   const navigate = useNavigate();
   const [requests, setRequests] = useState<BloodRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [donorProfile, setDonorProfile] = useState<Donor | null>(null);
+  const [filterTab, setFilterTab] = useState<"all" | "matching" | "mine">("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [query, setQuery] = useState("");
 
@@ -64,22 +73,66 @@ export default function BloodRequests() {
 
   useEffect(() => {
     document.title = "Blood Requests · BloodMap AI";
-    fetchRequests();
+    fetchUserAndRequests();
   }, []);
 
-  async function fetchRequests() {
+  async function fetchUserAndRequests() {
     setLoading(true);
     const { data: u } = await supabase.auth.getUser();
-    if (!u.user) return setLoading(false);
+    if (u.user) {
+      setCurrentUserId(u.user.id);
+      // Fetch donor profile if user is a registered donor
+      const { data: dData } = await supabase
+        .from("donors")
+        .select("*")
+        .eq("user_id", u.user.id)
+        .maybeSingle();
+      if (dData) {
+        setDonorProfile(dData as Donor);
+      }
+    }
 
-    const { data, error } = await supabase
+    // Fetch own requests
+    const { data: ownData } = await supabase
       .from("blood_requests")
       .select("*")
       .order("created_at", { ascending: false });
 
+    // Fetch all open requests via Security Definer RPC
+    const { data: openRpcData } = await supabase.rpc("get_open_blood_requests");
+
+    const reqMap = new Map<string, BloodRequest>();
+
+    (openRpcData as Partial<BloodRequest>[] | null || []).forEach((r) => {
+      if (r.id) {
+        reqMap.set(r.id, {
+          id: r.id,
+          user_id: r.user_id || "",
+          patient_name: r.patient_name || "Emergency Patient",
+          blood_group: r.blood_group || "O+",
+          units_needed: r.units_needed || 1,
+          urgency: (r.urgency as any) || "normal",
+          status: (r.status as any) || "open",
+          latitude: r.latitude || 0,
+          longitude: r.longitude || 0,
+          needed_by: r.needed_by || null,
+          reason: r.reason || null,
+          notes: r.notes || null,
+          created_at: r.created_at || new Date().toISOString(),
+        });
+      }
+    });
+
+    (ownData as BloodRequest[] | null || []).forEach((r) => {
+      reqMap.set(r.id, r);
+    });
+
+    const merged = Array.from(reqMap.values()).sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    setRequests(merged);
     setLoading(false);
-    if (error) return toast.error(error.message);
-    setRequests((data as BloodRequest[]) || []);
   }
 
   function captureLocation() {
@@ -132,96 +185,194 @@ export default function BloodRequests() {
     navigate(`/requests/${data.id}`);
   }
 
-  const filteredRequests = requests.filter((r) => {
-    if (filterStatus !== "all" && r.status !== filterStatus) return false;
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      const matchName = r.patient_name?.toLowerCase().includes(q);
-      const matchGroup = r.blood_group.toLowerCase().includes(q);
-      const matchReason = r.reason?.toLowerCase().includes(q);
-      if (!matchName && !matchGroup && !matchReason) return false;
-    }
-    return true;
-  });
+  // Filter logic
+  const filteredRequests = useMemo(() => {
+    return requests.filter((r) => {
+      // Status filter
+      if (filterStatus !== "all" && r.status !== filterStatus) return false;
+
+      // Tab filter
+      if (filterTab === "mine") {
+        if (r.user_id !== currentUserId) return false;
+      } else if (filterTab === "matching") {
+        if (!donorProfile) return false;
+        // Donor can donate if donor's blood group can be given to recipient group r.blood_group
+        const canDonate = isBloodCompatible(donorProfile.blood_group, r.blood_group);
+        if (!canDonate || r.status !== "open") return false;
+      }
+
+      // Search query filter
+      if (query.trim()) {
+        const q = query.toLowerCase();
+        const matchName = r.patient_name?.toLowerCase().includes(q);
+        const matchGroup = r.blood_group.toLowerCase().includes(q);
+        const matchReason = r.reason?.toLowerCase().includes(q);
+        if (!matchName && !matchGroup && !matchReason) return false;
+      }
+      return true;
+    });
+  }, [requests, filterStatus, filterTab, query, currentUserId, donorProfile]);
+
+  const matchingCount = useMemo(() => {
+    if (!donorProfile) return 0;
+    return requests.filter(
+      (r) => r.status === "open" && isBloodCompatible(donorProfile.blood_group, r.blood_group)
+    ).length;
+  }, [requests, donorProfile]);
 
   return (
-    <div className="min-h-screen bg-[var(--gradient-soft)]">
-      {/* Header */}
-      <header className="sticky top-0 z-30 glass-card rounded-none border-x-0 border-t-0">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3 font-bold text-primary">
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/home">
-                <ArrowLeft className="w-4 h-4 mr-1" /> Home
-              </Link>
-            </Button>
-            <div className="flex items-center gap-2">
-              <Droplet className="w-5 h-5 fill-primary" />
-              <span className="text-lg">Blood Requests</span>
+    <div className="min-h-screen bg-[var(--gradient-soft)] flex flex-col">
+      {/* Shared Responsive Header */}
+      <Navbar />
+
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6 flex-1 w-full">
+        {/* Banner for Donors */}
+        {donorProfile && matchingCount > 0 && (
+          <div className="glass-card rounded-2xl p-4 md:p-5 border-l-4 border-l-emerald-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-emerald-500/5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0">
+                <Heart className="w-5 h-5 fill-emerald-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-foreground text-base">
+                  You match {matchingCount} urgent blood {matchingCount === 1 ? "request" : "requests"}!
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Your blood group <span className="font-bold text-foreground">{donorProfile.blood_group}</span> can save lives. View requests you can donate to below.
+                </p>
+              </div>
             </div>
+            <Button
+              onClick={() => setFilterTab("matching")}
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-glow shrink-0 w-full sm:w-auto"
+            >
+              View Matching Requests ({matchingCount})
+            </Button>
+          </div>
+        )}
+
+        {/* Page Title & Create Button Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold flex items-center gap-2">
+              <Droplet className="w-7 h-7 text-primary fill-primary" /> Emergency Blood Requests
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Connect blood seekers directly with compatible donors in real-time.
+            </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link to="/forecast">Demand Forecast</Link>
-            </Button>
-            <Button onClick={() => setOpenModal(true)} className="shadow-glow" size="sm">
-              <Plus className="w-4 h-4 mr-1" /> Request Blood
-            </Button>
-          </div>
+          <Button
+            onClick={() => setOpenModal(true)}
+            size="lg"
+            className="shadow-glow w-full sm:w-auto shrink-0 font-bold"
+          >
+            <Plus className="w-5 h-5 mr-1.5" /> Request Blood Now
+          </Button>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Search & Filter Bar */}
-        <section className="glass-card rounded-2xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between">
-          <div className="flex-1 relative w-full">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-9"
-              placeholder="Search by patient name, blood group, or reason"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
+        {/* Search & Filter Control Bar */}
+        <section className="glass-card rounded-2xl p-4 space-y-4">
+          {/* Tabs */}
+          <div className="flex flex-wrap items-center gap-2 border-b pb-3">
+            <button
+              onClick={() => setFilterTab("all")}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition ${
+                filterTab === "all"
+                  ? "bg-primary text-primary-foreground shadow-glow"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              All Requests ({requests.length})
+            </button>
+
+            {donorProfile && (
+              <button
+                onClick={() => setFilterTab("matching")}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 ${
+                  filterTab === "matching"
+                    ? "bg-emerald-600 text-white shadow-glow"
+                    : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20"
+                }`}
+              >
+                <Heart className="w-3.5 h-3.5 fill-current" />
+                Matching My Blood Group ({matchingCount})
+              </button>
+            )}
+
+            {currentUserId && (
+              <button
+                onClick={() => setFilterTab("mine")}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition ${
+                  filterTab === "mine"
+                    ? "bg-primary text-primary-foreground shadow-glow"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                My Requests
+              </button>
+            )}
           </div>
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <Filter className="w-4 h-4 text-muted-foreground" />
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full md:w-[150px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="matched">Matched</SelectItem>
-                <SelectItem value="fulfilled">Fulfilled</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
+
+          {/* Search bar & Dropdowns */}
+          <div className="flex flex-col sm:flex-row gap-3 items-center">
+            <div className="flex-1 relative w-full">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                placeholder="Search by patient, blood group (e.g. O+), or reason"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-full sm:w-[150px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="open">Open</SelectItem>
+                  <SelectItem value="matched">Matched</SelectItem>
+                  <SelectItem value="fulfilled">Fulfilled</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </section>
 
-        {/* Requests List */}
+        {/* Requests Grid */}
         <section>
           {loading ? (
             <div className="grid place-items-center py-16 text-muted-foreground">
-              <Loader2 className="w-6 h-6 animate-spin" />
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           ) : filteredRequests.length === 0 ? (
             <div className="glass-card rounded-2xl p-12 text-center text-muted-foreground space-y-4">
               <Droplet className="w-12 h-12 text-primary/30 mx-auto" />
               <h3 className="text-xl font-semibold text-foreground">No blood requests found</h3>
               <p className="text-sm max-w-sm mx-auto">
-                Need urgent blood for yourself or a family member? Create a request to match with live donors.
+                {filterTab === "matching"
+                  ? "No open blood requests currently match your blood group."
+                  : "Need urgent blood for yourself or a family member? Create a request to match with live donors."}
               </p>
               <Button onClick={() => setOpenModal(true)} className="shadow-glow">
                 <Plus className="w-4 h-4 mr-2" /> Create Request Now
               </Button>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredRequests.map((req) => (
-                <RequestCard key={req.id} request={req} />
+                <RequestCard
+                  key={req.id}
+                  request={req}
+                  donorProfile={donorProfile}
+                  isOwner={req.user_id === currentUserId}
+                />
               ))}
             </div>
           )}
@@ -231,7 +382,7 @@ export default function BloodRequests() {
       {/* Create Request Modal */}
       {openModal && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 overflow-y-auto">
-          <div className="w-full max-w-lg rounded-2xl bg-background p-6 shadow-2xl space-y-5 my-8">
+          <div className="w-full max-w-lg rounded-2xl bg-background p-6 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <h2 className="text-xl font-bold flex items-center gap-2 text-primary">
                 <Droplet className="w-6 h-6 fill-primary" /> Create Emergency Blood Request
@@ -239,7 +390,7 @@ export default function BloodRequests() {
               <button
                 type="button"
                 onClick={() => setOpenModal(false)}
-                className="text-muted-foreground hover:text-foreground text-sm font-semibold"
+                className="text-muted-foreground hover:text-foreground text-sm font-semibold p-1"
               >
                 ✕
               </button>
@@ -257,7 +408,7 @@ export default function BloodRequests() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Required Blood Group</Label>
                   <Select value={bloodGroup} onValueChange={setBloodGroup}>
@@ -288,7 +439,7 @@ export default function BloodRequests() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Urgency Level</Label>
                   <Select
@@ -373,7 +524,20 @@ export default function BloodRequests() {
   );
 }
 
-function RequestCard({ request }: { request: BloodRequest }) {
+function RequestCard({
+  request,
+  donorProfile,
+  isOwner,
+}: {
+  request: BloodRequest;
+  donorProfile: Donor | null;
+  isOwner: boolean;
+}) {
+  const isCompatibleDonor =
+    donorProfile &&
+    request.status === "open" &&
+    isBloodCompatible(donorProfile.blood_group, request.blood_group);
+
   const urgencyColors = {
     critical: "bg-red-600 text-white font-bold animate-pulse",
     high: "bg-orange-500 text-white font-semibold",
@@ -389,8 +553,17 @@ function RequestCard({ request }: { request: BloodRequest }) {
     expired: "border-red-400 text-red-500 bg-red-50",
   };
 
+  const donateMsg = `Hello,\n\nI saw your blood request on BloodMap AI for ${request.blood_group} blood (${request.units_needed} units).\nI am a compatible registered donor (${donorProfile?.blood_group}) and ready to donate!\n\nPlease contact me to coordinate.`;
+
   return (
-    <div className="glass-card rounded-2xl p-5 hover:shadow-glow transition-all flex flex-col justify-between space-y-4">
+    <div className="glass-card rounded-2xl p-5 hover:shadow-glow transition-all flex flex-col justify-between space-y-4 relative border border-white/20">
+      {/* Donor compatibility badge */}
+      {isCompatibleDonor && (
+        <div className="bg-emerald-600 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5 w-fit shadow-sm">
+          <CheckCircle2 className="w-3.5 h-3.5" /> Compatible Donor Match - You Can Donate!
+        </div>
+      )}
+
       <div>
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -398,19 +571,24 @@ function RequestCard({ request }: { request: BloodRequest }) {
             <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
               <Clock className="w-3 h-3" />
               Created {new Date(request.created_at).toLocaleDateString()}
+              {isOwner && <span className="ml-1 text-primary font-semibold">(Your Request)</span>}
             </div>
           </div>
 
-          <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground font-bold text-base shadow-glow">
+          <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground font-bold text-base shadow-glow shrink-0">
             {request.blood_group}
           </span>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <span className={`px-2.5 py-0.5 rounded-full text-xs uppercase tracking-wide ${urgencyColors[request.urgency]}`}>
+          <span
+            className={`px-2.5 py-0.5 rounded-full text-xs uppercase tracking-wide ${urgencyColors[request.urgency]}`}
+          >
             {request.urgency} urgency
           </span>
-          <span className={`px-2.5 py-0.5 rounded-full text-xs uppercase tracking-wide border ${statusColors[request.status]}`}>
+          <span
+            className={`px-2.5 py-0.5 rounded-full text-xs uppercase tracking-wide border ${statusColors[request.status]}`}
+          >
             {request.status}
           </span>
           <span className="px-2.5 py-0.5 rounded-full text-xs bg-muted text-muted-foreground font-medium">
@@ -419,23 +597,35 @@ function RequestCard({ request }: { request: BloodRequest }) {
         </div>
 
         {request.reason && (
-          <p className="mt-3 text-sm text-muted-foreground line-clamp-2">
-            {request.reason}
-          </p>
+          <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{request.reason}</p>
         )}
       </div>
 
-      <div className="pt-2 border-t flex items-center justify-between">
-        <div className="text-xs text-muted-foreground flex items-center gap-1">
-          <MapPin className="w-3 h-3 text-primary" />
-          {request.latitude.toFixed(2)}, {request.longitude.toFixed(2)}
+      <div className="pt-3 border-t flex flex-col gap-2">
+        <div className="text-xs text-muted-foreground flex items-center justify-between">
+          <span className="flex items-center gap-1">
+            <MapPin className="w-3.5 h-3.5 text-primary" />
+            {request.latitude.toFixed(2)}, {request.longitude.toFixed(2)}
+          </span>
         </div>
 
-        <Button asChild size="sm">
-          <Link to={`/requests/${request.id}`}>
-            Find Donors →
-          </Link>
-        </Button>
+        <div className="flex gap-2 pt-1">
+          <Button asChild variant="outline" size="sm" className="flex-1">
+            <Link to={`/requests/${request.id}`}>View Details & Matches</Link>
+          </Button>
+
+          {isCompatibleDonor && donorProfile && (
+            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-glow">
+              <a
+                href={buildWhatsAppUrl(donorProfile.whatsapp_number, donateMsg)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <MessageCircle className="w-4 h-4 mr-1" /> Offer Donation
+              </a>
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

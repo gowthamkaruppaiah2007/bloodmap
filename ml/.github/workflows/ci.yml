@@ -3,10 +3,10 @@ name: ML Service CI
 on:
   push:
     paths:
-      - 'ml/**'
+      - "ml/**"
   pull_request:
     paths:
-      - 'ml/**'
+      - "ml/**"
 
 jobs:
   test:
@@ -18,7 +18,7 @@ jobs:
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |

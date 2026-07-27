@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowLeft,
   Droplet,
   TrendingUp,
   Calendar,
   AlertTriangle,
   Loader2,
-  Filter,
   Activity,
+  ArrowLeft,
 } from "lucide-react";
 import {
   AreaChart,
@@ -29,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { BLOOD_GROUPS } from "@/lib/donors";
 import { forecastDemand, type DemandForecastResult } from "@/lib/ml.functions";
+import Navbar from "@/components/Navbar";
 
 export default function DemandForecast() {
   const [horizon, setHorizon] = useState<number>(14);
@@ -50,35 +50,25 @@ export default function DemandForecast() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--gradient-soft)]">
-      {/* Header */}
-      <header className="sticky top-0 z-20 glass-card rounded-none border-x-0 border-t-0">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/home">
-              <ArrowLeft className="w-4 h-4 mr-1" /> Home
-            </Link>
-          </Button>
-          <div className="flex items-center gap-2 font-bold text-primary">
-            <TrendingUp className="w-5 h-5 text-primary" />
-            <span className="text-lg">Demand Forecast AI</span>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[var(--gradient-soft)] flex flex-col">
+      {/* Shared Responsive Header */}
+      <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-        {/* Title Section */}
-        <section className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <main className="max-w-7xl mx-auto px-4 py-6 sm:py-8 space-y-6 flex-1 w-full">
+        {/* Title & Filter Controls Section */}
+        <section className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold">Blood Request Demand Forecast</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Time-series predictive model (Prophet & XGBoost) estimating blood demand spikes by region and type.
+            <h1 className="text-2xl sm:text-3xl font-extrabold flex items-center gap-2">
+              <TrendingUp className="w-7 h-7 text-primary" /> Blood Request Demand Forecast
+            </h1>
+            <p className="text-muted-foreground text-xs sm:text-sm mt-1">
+              Time-series predictive model (Prophet & XGBoost) estimating blood demand spikes by region and blood group.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <Select value={region} onValueChange={setRegion}>
-              <SelectTrigger className="w-[130px]">
+              <SelectTrigger className="w-[120px] sm:w-[130px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -91,7 +81,7 @@ export default function DemandForecast() {
             </Select>
 
             <Select value={bloodGroup} onValueChange={setBloodGroup}>
-              <SelectTrigger className="w-[130px]">
+              <SelectTrigger className="w-[120px] sm:w-[130px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -105,7 +95,7 @@ export default function DemandForecast() {
             </Select>
 
             <Select value={horizon.toString()} onValueChange={(v) => setHorizon(parseInt(v))}>
-              <SelectTrigger className="w-[130px]">
+              <SelectTrigger className="w-[110px] sm:w-[120px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -118,7 +108,7 @@ export default function DemandForecast() {
         </section>
 
         {/* Stats Grid */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard
             title="Total Projected"
             value={forecastData ? `${forecastData.totalProjected} units` : "—"}
@@ -148,25 +138,28 @@ export default function DemandForecast() {
           />
         </section>
 
-        {/* Time-Series Chart */}
-        <section className="glass-card rounded-3xl p-6 md:p-8 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold flex items-center gap-2">
+        {/* Time-Series Chart Container */}
+        <section className="glass-card rounded-3xl p-4 sm:p-8 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-primary" /> Projected Request Volume ({horizon} Days)
             </h2>
-            <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
+            <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full w-fit">
               Confidence Interval: 90%
             </span>
           </div>
 
           {loading || !forecastData ? (
-            <div className="h-[320px] grid place-items-center text-muted-foreground">
-              <Loader2 className="w-6 h-6 animate-spin" />
+            <div className="h-[280px] sm:h-[320px] grid place-items-center text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="h-[340px] w-full pt-4">
+            <div className="h-[280px] sm:h-[340px] w-full pt-4">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={forecastData.forecast} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <AreaChart
+                  data={forecastData.forecast}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
                   <defs>
                     <linearGradient id="colorPredicted" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
@@ -178,8 +171,8 @@ export default function DemandForecast() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "rgba(255, 255, 255, 0.95)",
@@ -210,15 +203,15 @@ export default function DemandForecast() {
         </section>
 
         {/* Breakdown Table */}
-        <section className="glass-card rounded-3xl p-6">
-          <h3 className="font-bold text-lg mb-4">Daily Forecast Breakdown</h3>
+        <section className="glass-card rounded-3xl p-4 sm:p-6">
+          <h3 className="font-bold text-base sm:text-lg mb-4">Daily Forecast Breakdown</h3>
           {loading || !forecastData ? (
             <div className="py-8 grid place-items-center">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-xs sm:text-sm">
                 <thead className="text-left text-muted-foreground border-b">
                   <tr>
                     <th className="pb-3 px-2">Date</th>
@@ -275,13 +268,15 @@ export default function DemandForecast() {
 
 function StatCard({ title, value, icon }: { title: string; value: string; icon: React.ReactNode }) {
   return (
-    <div className="glass-card rounded-2xl p-5 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
+    <div className="glass-card rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4">
+      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
         {icon}
       </div>
       <div>
-        <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{title}</div>
-        <div className="text-xl font-bold mt-0.5">{value}</div>
+        <div className="text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+          {title}
+        </div>
+        <div className="text-base sm:text-xl font-bold mt-0.5 truncate">{value}</div>
       </div>
     </div>
   );

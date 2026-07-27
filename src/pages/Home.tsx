@@ -4,13 +4,13 @@ import {
   Droplet,
   Search,
   MapPin,
-  LogOut,
   MessageCircle,
   Loader2,
   AlertCircle,
   Filter,
-  TrendingUp,
   FileText,
+  Heart,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,9 @@ import {
 } from "@/components/ui/select";
 import { BLOOD_GROUPS, type Donor } from "@/lib/donors";
 import { buildWhatsAppUrl, formatDistance, haversineKm } from "@/lib/distance";
+import { isBloodCompatible } from "@/lib/ml.functions";
+import type { BloodRequest } from "./BloodRequests";
+import Navbar from "@/components/Navbar";
 
 const MapView = lazy(() => import("@/components/MapView"));
 
@@ -32,10 +35,11 @@ export default function Home() {
   const navigate = useNavigate();
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [donors, setDonors] = useState<Donor[]>([]);
+  const [matchingRequests, setMatchingRequests] = useState<BloodRequest[]>([]);
+  const [donorProfile, setDonorProfile] = useState<Donor | null>(null);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [groupFilter, setGroupFilter] = useState<string>("all");
-  const [profileType, setProfileType] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = "Find donors near you · BloodMap AI";
@@ -47,11 +51,32 @@ export default function Home() {
         .select("user_type")
         .eq("id", u.user.id)
         .maybeSingle();
+
       if (!p?.user_type) {
         navigate("/onboarding");
         return;
       }
-      setProfileType(p.user_type);
+
+      // Check if user is a registered donor
+      const { data: dData } = await supabase
+        .from("donors")
+        .select("*")
+        .eq("user_id", u.user.id)
+        .maybeSingle();
+
+      if (dData) {
+        const d = dData as Donor;
+        setDonorProfile(d);
+
+        // Fetch open requests matching this donor
+        const { data: openReqs } = await supabase.rpc("get_open_blood_requests");
+        if (openReqs) {
+          const compatible = (openReqs as Partial<BloodRequest>[]).filter(
+            (r) => r.blood_group && isBloodCompatible(d.blood_group, r.blood_group)
+          ) as BloodRequest[];
+          setMatchingRequests(compatible);
+        }
+      }
     })();
   }, [navigate]);
 
@@ -83,6 +108,7 @@ export default function Home() {
         setDonors((data as Donor[]) ?? []);
       })
       .subscribe();
+
     return () => {
       supabase.removeChannel(ch);
     };
@@ -102,11 +128,6 @@ export default function Home() {
       .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
   }, [donors, query, groupFilter, center]);
 
-  async function logout() {
-    await supabase.auth.signOut();
-    navigate("/auth");
-  }
-
   function searchNearby() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -118,40 +139,38 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--gradient-soft)]">
-      {/* Header */}
-      <header className="sticky top-0 z-30 glass-card border-x-0 border-t-0 rounded-none">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-bold text-primary">
-            <Droplet className="w-6 h-6 fill-primary" />
-            <span className="text-lg">BloodMap AI</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link to="/requests">
-                <FileText className="w-4 h-4 mr-1" /> Blood Requests
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/forecast">
-                <TrendingUp className="w-4 h-4 mr-1" /> Forecast AI
-              </Link>
-            </Button>
-            {profileType === "seeker" && (
-              <Button asChild variant="default" size="sm" className="shadow-glow">
-                <Link to="/donor-setup">Become a donor</Link>
-              </Button>
-            )}
-            <Button onClick={logout} variant="ghost" size="sm">
-              <LogOut className="w-4 h-4 mr-1" /> Sign out
-            </Button>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[var(--gradient-soft)] flex flex-col">
+      {/* Shared Responsive Header */}
+      <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Hero / stats */}
-        <section className="grid md:grid-cols-3 gap-4">
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6 flex-1 w-full">
+        {/* Banner for Matching Blood Requests for Registered Donors */}
+        {donorProfile && matchingRequests.length > 0 && (
+          <section className="glass-card rounded-2xl p-5 border-l-4 border-l-emerald-500 bg-emerald-500/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-700 flex items-center justify-center shrink-0">
+                <Heart className="w-6 h-6 fill-emerald-600" />
+              </div>
+              <div>
+                <h2 className="font-extrabold text-foreground text-base sm:text-lg">
+                  {matchingRequests.length} Urgent Blood {matchingRequests.length === 1 ? "Request" : "Requests"} Match Your Blood Group ({donorProfile.blood_group})!
+                </h2>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                  Patients are currently seeking blood donations that you can fulfill.
+                </p>
+              </div>
+            </div>
+
+            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-glow shrink-0 w-full sm:w-auto">
+              <Link to="/requests">
+                View & Offer Donation <ArrowRight className="w-4 h-4 ml-1" />
+              </Link>
+            </Button>
+          </section>
+        )}
+
+        {/* Stats Section */}
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Stat
             label="Donors nearby"
             value={enriched.length.toString()}
@@ -163,14 +182,14 @@ export default function Home() {
             icon={<MapPin className="w-5 h-5 text-primary" />}
           />
           <Stat
-            label="Closest"
+            label="Closest Donor"
             value={enriched[0]?.distanceKm != null ? formatDistance(enriched[0].distanceKm) : "—"}
             icon={<AlertCircle className="w-5 h-5 text-primary" />}
           />
         </section>
 
-        {/* Map */}
-        <section className="glass-card rounded-2xl overflow-hidden h-[460px] relative">
+        {/* Map View Container */}
+        <section className="glass-card rounded-2xl overflow-hidden h-[340px] sm:h-[460px] relative shadow-md">
           <Suspense
             fallback={
               <div className="absolute inset-0 grid place-items-center text-muted-foreground">
@@ -182,51 +201,61 @@ export default function Home() {
           </Suspense>
         </section>
 
-        {/* Search bar */}
+        {/* Search & Filter Bar */}
         <section className="glass-card rounded-2xl p-4 md:p-5 flex flex-col md:flex-row gap-3 md:items-center">
           <div className="flex-1 relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="pl-9"
-              placeholder="Search by donor name or blood group"
+              placeholder="Search by donor name or blood group (e.g. O+)"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-muted-foreground" />
-            <Select value={groupFilter} onValueChange={setGroupFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All groups</SelectItem>
-                {BLOOD_GROUPS.map((g) => (
-                  <SelectItem key={g} value={g}>
-                    {g}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
+              <Select value={groupFilter} onValueChange={setGroupFilter}>
+                <SelectTrigger className="w-full sm:w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All groups</SelectItem>
+                  {BLOOD_GROUPS.map((g) => (
+                    <SelectItem key={g} value={g}>
+                      {g}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button onClick={searchNearby} className="shadow-glow font-semibold" size="default">
+              <MapPin className="w-4 h-4 mr-2" /> Search nearby
+            </Button>
           </div>
-          <Button onClick={searchNearby} className="shadow-glow" size="lg">
-            <MapPin className="w-4 h-4 mr-2" /> Search nearby donors
-          </Button>
         </section>
 
-        {/* Donor list */}
+        {/* Donor List Grid */}
         <section>
-          <h2 className="text-xl font-bold mb-4">Nearby donors</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Available Donors</h2>
+            <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
+              {enriched.length} donors found
+            </span>
+          </div>
+
           {loading ? (
             <div className="grid place-items-center py-12 text-muted-foreground">
-              <Loader2 className="w-6 h-6 animate-spin" />
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           ) : enriched.length === 0 ? (
             <div className="glass-card rounded-2xl p-10 text-center text-muted-foreground">
-              No donors match your search yet.
+              No donors match your search criteria.
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {enriched.map((d) => (
                 <DonorCard key={d.id} donor={d} />
               ))}
@@ -240,13 +269,13 @@ export default function Home() {
 
 function Stat({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
   return (
-    <div className="glass-card rounded-2xl p-5 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+    <div className="glass-card rounded-2xl p-4 sm:p-5 flex items-center gap-4">
+      <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
         {icon}
       </div>
       <div>
-        <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
-        <div className="text-lg font-bold">{value}</div>
+        <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{label}</div>
+        <div className="text-base sm:text-lg font-bold mt-0.5 truncate">{value}</div>
       </div>
     </div>
   );
@@ -255,37 +284,38 @@ function Stat({ label, value, icon }: { label: string; value: string; icon: Reac
 function DonorCard({ donor }: { donor: Donor & { distanceKm?: number } }) {
   const waMsg = `Hello,\n\nI found your profile on BloodMap AI.\nI urgently need ${donor.blood_group} blood.\n\nCan you please help?`;
   return (
-    <div className="glass-card rounded-2xl p-5 hover:shadow-glow transition-all hover:-translate-y-1">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="font-bold text-lg">{donor.full_name}</div>
-          <div className="text-sm text-muted-foreground">
-            {donor.distanceKm != null
-              ? `${formatDistance(donor.distanceKm)} away`
-              : "Distance unknown"}
+    <div className="glass-card rounded-2xl p-5 hover:shadow-glow transition-all hover:-translate-y-1 flex flex-col justify-between space-y-4 border border-white/20">
+      <div>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="font-bold text-lg">{donor.full_name}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">
+              {donor.distanceKm != null
+                ? `${formatDistance(donor.distanceKm)} away`
+                : "Distance unknown"}
+            </div>
+          </div>
+          <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground font-bold text-sm shadow-glow shrink-0">
+            {donor.blood_group}
+          </span>
+        </div>
+        <div className="mt-4 text-xs sm:text-sm text-muted-foreground space-y-1">
+          <div>
+            <span className="font-medium text-foreground">Available Days:</span>{" "}
+            {(donor.available_days || []).map((d) => d.slice(0, 3)).join(", ") || "—"}
+          </div>
+          <div>
+            <span className="font-medium text-foreground">Hours:</span> {donor.start_time || "—"} –{" "}
+            {donor.end_time || "—"}
           </div>
         </div>
-        <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground font-bold text-sm shadow-glow">
-          {donor.blood_group}
-        </span>
       </div>
-      <div className="mt-4 text-sm text-muted-foreground space-y-1">
-        <div>
-          <span className="font-medium text-foreground">Days:</span>{" "}
-          {(donor.available_days || []).map((d) => d.slice(0, 3)).join(", ") || "—"}
-        </div>
-        <div>
-          <span className="font-medium text-foreground">Time:</span> {donor.start_time || "—"} –{" "}
-          {donor.end_time || "—"}
-        </div>
-      </div>
-      <div className="mt-4 flex gap-2">
+
+      <div className="pt-2 flex gap-2">
         <Button asChild variant="outline" size="sm" className="flex-1">
-          <Link to={`/donors/${donor.id}`}>
-            View details
-          </Link>
+          <Link to={`/donors/${donor.id}`}>View details</Link>
         </Button>
-        <Button asChild size="sm" className="flex-1">
+        <Button asChild size="sm" className="flex-1 shadow-glow">
           <a href={buildWhatsAppUrl(donor.whatsapp_number, waMsg)} target="_blank" rel="noreferrer">
             <MessageCircle className="w-4 h-4 mr-1" /> WhatsApp
           </a>

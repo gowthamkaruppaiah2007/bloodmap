@@ -32,12 +32,22 @@ export default function DonorSetup() {
   const [emergency, setEmergency] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const allDaysSelected = days.length === DAYS.length;
+
   useEffect(() => {
     document.title = "Register as donor · BloodMap AI";
   }, []);
 
   function toggleDay(d: string) {
     setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
+  }
+
+  function toggleAllDays() {
+    if (allDaysSelected) {
+      setDays([]);
+    } else {
+      setDays([...DAYS]);
+    }
   }
 
   function fetchLocation() {
@@ -161,8 +171,27 @@ export default function DonorSetup() {
           </div>
 
           <div className="space-y-2">
-            <Label>Available days</Label>
+            <div className="flex items-center justify-between">
+              <Label>Available days</Label>
+              <button
+                type="button"
+                onClick={toggleAllDays}
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                {allDaysSelected ? "Deselect all" : "Select all"}
+              </button>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <label
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer transition font-semibold ${
+                  allDaysSelected
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border hover:bg-muted"
+                }`}
+              >
+                <Checkbox checked={allDaysSelected} onCheckedChange={toggleAllDays} />
+                <span className="text-sm">All Days</span>
+              </label>
               {DAYS.map((d) => (
                 <label
                   key={d}
@@ -211,7 +240,6 @@ export default function DonorSetup() {
           <div className="space-y-2">
             <Label htmlFor="ec">Emergency contact (optional)</Label>
             <Input
-              id="ec"
               placeholder="Backup phone or name"
               value={emergency}
               onChange={(e) => setEmergency(e.target.value)}

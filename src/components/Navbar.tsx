@@ -94,6 +94,19 @@ export default function Navbar() {
             </Link>
           </Button>
 
+          {userEmail && (
+            <Button
+              asChild
+              variant={isActive("/profile") ? "secondary" : "ghost"}
+              size="sm"
+              className="font-medium"
+            >
+              <Link to="/profile">
+                <User className="w-4 h-4 mr-1.5 text-primary" /> Profile
+              </Link>
+            </Button>
+          )}
+
           {profileType === "seeker" && (
             <Button asChild variant="outline" size="sm" className="border-primary/40 text-primary font-semibold">
               <Link to="/donor-setup">
@@ -157,6 +170,17 @@ export default function Navbar() {
             >
               <TrendingUp className="w-5 h-5 text-primary" /> Forecast AI
             </Link>
+
+            {userEmail && (
+              <Link
+                to="/profile"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-base transition ${
+                  isActive("/profile") ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted"
+                }`}
+              >
+                <User className="w-5 h-5 text-primary" /> My Profile & Address
+              </Link>
+            )}
 
             {profileType === "seeker" && (
               <Link

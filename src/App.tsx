@@ -13,6 +13,7 @@ import DonorProfile from "./pages/DonorProfile";
 import BloodRequests from "./pages/BloodRequests";
 import RequestDetail from "./pages/RequestDetail";
 import DemandForecast from "./pages/DemandForecast";
+import UserProfile from "./pages/UserProfile";
 import AdminDashboard from "./pages/AdminDashboard";
 import { NotFoundPage } from "./pages/NotFoundPage";
 
@@ -54,6 +55,7 @@ export default function App() {
         {/* Protected routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/home" element={<Home />} />
+          <Route path="/profile" element={<UserProfile />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/donor-setup" element={<DonorSetup />} />
           <Route path="/donors/:id" element={<DonorProfile />} />

@@ -259,6 +259,7 @@ export type Database = {
       };
       profiles: {
         Row: {
+          address: string | null;
           created_at: string;
           email: string;
           full_name: string;
@@ -268,6 +269,7 @@ export type Database = {
           user_type: string | null;
         };
         Insert: {
+          address?: string | null;
           created_at?: string;
           email: string;
           full_name: string;
@@ -277,6 +279,7 @@ export type Database = {
           user_type?: string | null;
         };
         Update: {
+          address?: string | null;
           created_at?: string;
           email?: string;
           full_name?: string;

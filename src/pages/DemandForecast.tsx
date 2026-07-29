@@ -158,12 +158,26 @@ export default function DemandForecast() {
           </div>
         </section>
 
-        {/* Clean Forecast Summary Cards */}
+        {/* Data-Driven Forecast Summary Cards */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard
             title="Total Projected Demand"
             value={forecastData ? `${forecastData.totalProjected} units` : "—"}
             icon={<Droplet className="w-5 h-5 text-red-500 fill-red-500" />}
+          />
+          <StatCard
+            title="Website Active Requests"
+            value={
+              forecastData
+                ? `${forecastData.actualRequestsCount} Req (${forecastData.actualUnitsCount} Units)`
+                : "—"
+            }
+            icon={<Activity className="w-5 h-5 text-emerald-500" />}
+          />
+          <StatCard
+            title="Top Requested Group"
+            value={forecastData?.topRequestedBloodGroup || "None"}
+            icon={<AlertTriangle className="w-5 h-5 text-amber-500" />}
           />
           <StatCard
             title="Peak Demand Day"
@@ -176,16 +190,6 @@ export default function DemandForecast() {
                 : "—"
             }
             icon={<Calendar className="w-5 h-5 text-blue-500" />}
-          />
-          <StatCard
-            title="High-Risk Blood Groups"
-            value="O- & A-"
-            icon={<AlertTriangle className="w-5 h-5 text-amber-500" />}
-          />
-          <StatCard
-            title="Forecast Horizon"
-            value={`${horizon} Days`}
-            icon={<Activity className="w-5 h-5 text-emerald-500" />}
           />
         </section>
 

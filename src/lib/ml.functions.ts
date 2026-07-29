@@ -201,7 +201,19 @@ export async function matchDonorsForRequest(params: {
   return rankDonorsFallback(params.bloodGroup, params.latitude, params.longitude, donors);
 }
 
-// Demand forecasting helper
+export interface DemandForecastResult {
+  region: string;
+  bloodGroup: string;
+  horizonDays: number;
+  forecast: ForecastPoint[];
+  totalProjected: number;
+  peakDay: string;
+  actualRequestsCount: number;
+  actualUnitsCount: number;
+  topRequestedBloodGroup: string;
+}
+
+// Data-driven demand forecasting based on actual website blood_requests
 export async function forecastDemand(params: {
   region?: string;
   bloodGroup?: string;
@@ -211,58 +223,78 @@ export async function forecastDemand(params: {
   const bloodGroup = params.bloodGroup || "All";
   const region = params.region || "Global";
 
-  const mlApiUrl = import.meta.env.VITE_ML_API_URL;
-  const mlApiKey = import.meta.env.VITE_ML_API_KEY;
+  // 1. Fetch real blood requests from Supabase database
+  let dbQuery = supabase
+    .from("blood_requests")
+    .select("id, blood_group, units_needed, urgency, created_at, needed_by, status");
 
-  if (mlApiUrl) {
-    try {
-      const res = await fetch(`${mlApiUrl}/forecast`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(mlApiKey ? { Authorization: `Bearer ${mlApiKey}` } : {}),
-        },
-        body: JSON.stringify({
-          region,
-          blood_group: bloodGroup,
-          horizon_days: horizon,
-        }),
-      });
-      if (res.ok) {
-        const json = await res.json();
-        return {
-          region: json.region,
-          bloodGroup: json.blood_group,
-          horizonDays: json.horizon_days,
-          forecast: json.forecast,
-          totalProjected: json.total_projected,
-          peakDay: json.peak_day,
-        };
-      }
-    } catch (err) {
-      console.warn("[ML Service] Forecast endpoint unreachable, producing baseline forecast:", err);
-    }
+  if (bloodGroup !== "All") {
+    dbQuery = dbQuery.eq("blood_group", bloodGroup);
   }
 
-  // Baseline forecast generator
+  const { data: dbRequests } = await dbQuery;
+
+  // Aggregate stats from actual website requests
+  const requestsList = dbRequests ?? [];
+  const actualRequestsCount = requestsList.length;
+  let actualUnitsCount = 0;
+  const groupCounts: Record<string, number> = {};
+
+  // Build a map of actual demand by date (YYYY-MM-DD)
+  const actualDateDemand: Record<string, number> = {};
+
+  requestsList.forEach((req) => {
+    const units = req.units_needed || 1;
+    actualUnitsCount += units;
+
+    groupCounts[req.blood_group] = (groupCounts[req.blood_group] || 0) + units;
+
+    // Use needed_by or created_at date
+    const targetDateStr = (req.needed_by || req.created_at).slice(0, 10);
+    actualDateDemand[targetDateStr] = (actualDateDemand[targetDateStr] || 0) + units;
+  });
+
+  // Determine top requested blood group in website database
+  let topRequestedBloodGroup = "None";
+  let maxGroupCount = -1;
+  Object.entries(groupCounts).forEach(([bg, cnt]) => {
+    if (cnt > maxGroupCount) {
+      maxGroupCount = cnt;
+      topRequestedBloodGroup = `${bg} (${cnt} unit${cnt > 1 ? "s" : ""})`;
+    }
+  });
+
+  // 2. Generate data-driven forecast based on actual website request patterns
   const forecast: ForecastPoint[] = [];
   const today = new Date();
   let totalProjected = 0;
   let maxVal = -1;
   let peakDay = "";
 
+  // Base daily multiplier derived from website activity
+  const baseRate = Math.max(1, actualUnitsCount);
+
   for (let i = 1; i <= horizon; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() + i);
     const dateStr = d.toISOString().slice(0, 10);
-    // Synthetic deterministic baseline model
+
+    // Sum actual units scheduled for this date + projected model trend
+    const actualForDate = actualDateDemand[dateStr] || 0;
     const dayOfWeek = d.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const base = isWeekend ? 8 : 14;
-    const noise = Math.sin(i * 0.7) * 3;
-    const predicted = Math.max(1, Math.round(base + noise));
-    const lower = Math.max(0, Math.round(predicted * 0.75));
-    const upper = Math.round(predicted * 1.3);
+
+    // Time-series forecast curve incorporating actual database requests
+    const trendMultiplier = isWeekend ? 1.2 : 0.95;
+    const seasonalFactor = Math.sin(i * 0.5) * 0.3 + 1.0;
+    
+    const predicted = Math.max(
+      actualForDate,
+      Math.round((baseRate * 0.3 + actualForDate) * trendMultiplier * seasonalFactor)
+    );
+
+    const lower = Math.max(0, Math.round(predicted * 0.7));
+    const upper = Math.round(predicted * 1.35 + 1);
 
     totalProjected += predicted;
     if (predicted > maxVal) {
@@ -285,6 +317,9 @@ export async function forecastDemand(params: {
     forecast,
     totalProjected,
     peakDay,
+    actualRequestsCount,
+    actualUnitsCount,
+    topRequestedBloodGroup,
   };
 }
 

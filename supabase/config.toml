@@ -1,1 +1,5 @@
 project_id = "sifwzveymuebfucqtwat"
+
+[auth.email.template.recovery]
+subject = "Email Verification OTP"
+content_path = "./templates/reset_password.html"

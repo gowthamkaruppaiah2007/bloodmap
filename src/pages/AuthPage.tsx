@@ -98,9 +98,24 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // 3-step OTP Forgot Password state
   const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotStep, setForgotStep] = useState<"email" | "otp" | "password">("email");
   const [forgotEmail, setForgotEmail] = useState("");
+  const [otpToken, setOtpToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
+
+  function resetForgotState() {
+    setForgotOpen(false);
+    setForgotStep("email");
+    setOtpToken("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setForgotLoading(false);
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -141,16 +156,78 @@ function LoginForm() {
     navigate("/home");
   }
 
-  async function onForgot(e: React.FormEvent) {
+  // Step 1: Send OTP via Email / SMTP
+  async function onSendOtp(e: React.FormEvent) {
     e.preventDefault();
+    if (!forgotEmail.trim()) return toast.error("Please enter a valid email address.");
     setForgotLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+
+    let { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim());
+    if (error) {
+      // Fallback: try signInWithOtp if resetPasswordForEmail returns an issue
+      const retry = await supabase.auth.signInWithOtp({ email: forgotEmail.trim() });
+      if (!retry.error) error = null;
+    }
+
     setForgotLoading(false);
     if (error) return toast.error(error.message);
-    toast.success("Password reset link sent. Check your inbox.");
-    setForgotOpen(false);
+
+    toast.success("6-digit OTP code sent to your email!");
+    setForgotStep("otp");
+  }
+
+  // Step 2: Verify 6-digit OTP token
+  async function onVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    const cleanToken = otpToken.trim();
+    if (cleanToken.length < 6) {
+      return toast.error("Please enter the complete 6-digit OTP code.");
+    }
+    setForgotLoading(true);
+
+    // Try recovery type first
+    let { error } = await supabase.auth.verifyOtp({
+      email: forgotEmail.trim(),
+      token: cleanToken,
+      type: "recovery",
+    });
+
+    // If recovery type fails, try email type
+    if (error) {
+      const retry = await supabase.auth.verifyOtp({
+        email: forgotEmail.trim(),
+        token: cleanToken,
+        type: "email",
+      });
+      if (!retry.error) error = null;
+    }
+
+    setForgotLoading(false);
+    if (error) return toast.error(error.message || "Invalid or expired OTP code.");
+
+    toast.success("OTP verified successfully!");
+    setForgotStep("password");
+  }
+
+  // Step 3: Reset to New Password
+  async function onResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      return toast.error("Password must be at least 6 characters long.");
+    }
+    if (newPassword !== confirmPassword) {
+      return toast.error("Passwords do not match.");
+    }
+
+    setForgotLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setForgotLoading(false);
+
+    if (error) return toast.error(error.message);
+
+    toast.success("Password updated successfully! You are now logged in.");
+    resetForgotState();
+    navigate("/home");
   }
 
   return (
@@ -173,6 +250,7 @@ function LoginForm() {
             type="button"
             onClick={() => {
               setForgotEmail(email);
+              setForgotStep("email");
               setForgotOpen(true);
             }}
             className="text-xs font-medium text-primary hover:underline"
@@ -196,46 +274,164 @@ function LoginForm() {
       {forgotOpen && (
         <div
           className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4"
-          onClick={() => setForgotOpen(false)}
+          onClick={resetForgotState}
         >
           <div
             className="w-full max-w-sm rounded-2xl bg-background p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold">Reset your password</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Enter your email and we'll send you a reset link.
-            </p>
-            <div className="space-y-2 mt-4">
-              <Label htmlFor="fp-email">Email</Label>
-              <Input
-                id="fp-email"
-                type="email"
-                required
-                value={forgotEmail}
-                onChange={(e) => setForgotEmail(e.target.value)}
-                placeholder="you@example.com"
-              />
-            </div>
-            <div className="flex gap-2 mt-5">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => setForgotOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                className="flex-1 shadow-glow"
-                onClick={onForgot}
-                disabled={forgotLoading || !forgotEmail}
-              >
-                {forgotLoading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                Send link
-              </Button>
-            </div>
+            {forgotStep === "email" && (
+              <form onSubmit={onSendOtp} className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Reset your password</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Enter your registered email address to receive a 6-digit OTP code via email.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fp-email">Email Address</Label>
+                  <Input
+                    id="fp-email"
+                    type="email"
+                    required
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="you@example.com"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={resetForgotState}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 shadow-glow"
+                    disabled={forgotLoading || !forgotEmail}
+                  >
+                    {forgotLoading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                    Send OTP
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {forgotStep === "otp" && (
+              <form onSubmit={onVerifyOtp} className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Enter Verification Code</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    We sent a 6-digit OTP to <span className="font-medium text-foreground">{forgotEmail}</span>.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fp-otp">6-Digit OTP Code</Label>
+                  <Input
+                    id="fp-otp"
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={otpToken}
+                    onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, ""))}
+                    placeholder="123456"
+                    className="text-center text-xl tracking-[0.4em] font-mono"
+                    autoFocus
+                  />
+                </div>
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setForgotStep("email")}
+                    className="text-muted-foreground hover:underline"
+                  >
+                    Change Email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onSendOtp}
+                    disabled={forgotLoading}
+                    className="text-primary font-medium hover:underline disabled:opacity-50"
+                  >
+                    Resend Code
+                  </button>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={resetForgotState}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 shadow-glow"
+                    disabled={forgotLoading || otpToken.length < 6}
+                  >
+                    {forgotLoading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                    Verify OTP
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {forgotStep === "password" && (
+              <form onSubmit={onResetPassword} className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Create New Password</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    OTP verified! Choose a new password for your account.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fp-new-pw">New Password</Label>
+                  <Input
+                    id="fp-new-pw"
+                    type="password"
+                    required
+                    minLength={6}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fp-confirm-pw">Confirm New Password</Label>
+                  <Input
+                    id="fp-confirm-pw"
+                    type="password"
+                    required
+                    minLength={6}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={resetForgotState}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 shadow-glow"
+                    disabled={forgotLoading || !newPassword || !confirmPassword}
+                  >
+                    {forgotLoading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                    Save Password
+                  </Button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

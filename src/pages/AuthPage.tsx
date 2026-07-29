@@ -7,6 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+} from "@/components/ui/input-otp";
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -328,19 +334,27 @@ function LoginForm() {
                     We sent a 6-digit OTP to <span className="font-medium text-foreground">{forgotEmail}</span>.
                   </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fp-otp">6-Digit OTP Code</Label>
-                  <Input
+                <div className="space-y-3 flex flex-col items-center">
+                  <Label htmlFor="fp-otp" className="w-full text-left">6-Digit OTP Code</Label>
+                  <InputOTP
                     id="fp-otp"
-                    type="text"
-                    required
                     maxLength={6}
                     value={otpToken}
-                    onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, ""))}
-                    placeholder="123456"
-                    className="text-center text-xl tracking-[0.4em] font-mono"
-                    autoFocus
-                  />
+                    onChange={(val) => setOtpToken(val.replace(/\D/g, ""))}
+                    containerClassName="justify-center py-2"
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} className="w-10 h-12 text-lg font-bold text-primary" />
+                      <InputOTPSlot index={1} className="w-10 h-12 text-lg font-bold text-primary" />
+                      <InputOTPSlot index={2} className="w-10 h-12 text-lg font-bold text-primary" />
+                    </InputOTPGroup>
+                    <InputOTPSeparator />
+                    <InputOTPGroup>
+                      <InputOTPSlot index={3} className="w-10 h-12 text-lg font-bold text-primary" />
+                      <InputOTPSlot index={4} className="w-10 h-12 text-lg font-bold text-primary" />
+                      <InputOTPSlot index={5} className="w-10 h-12 text-lg font-bold text-primary" />
+                    </InputOTPGroup>
+                  </InputOTP>
                 </div>
                 <div className="flex items-center justify-between text-xs pt-1">
                   <button

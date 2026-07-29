@@ -6,32 +6,95 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+} from "@/components/ui/input-otp";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
   const [hasSession, setHasSession] = useState(false);
+  
+  // OTP flow state
+  const [step, setStep] = useState<"email" | "otp" | "password">("email");
+  const [email, setEmail] = useState("");
+  const [otpToken, setOtpToken] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     document.title = "Reset password · BloodMap AI";
-    // Supabase parses the recovery token from the URL hash and creates a session.
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" || session) {
         setHasSession(true);
+        setStep("password");
         setReady(true);
       }
     });
     supabase.auth.getSession().then(({ data }) => {
-      setHasSession(!!data.session);
+      if (data.session) {
+        setHasSession(true);
+        setStep("password");
+      }
       setReady(true);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSendOtp(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) return toast.error("Please enter a valid email address.");
+    setLoading(true);
+
+    let { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+    if (error) {
+      const retry = await supabase.auth.signInWithOtp({ email: email.trim() });
+      if (!retry.error) error = null;
+    }
+
+    setLoading(false);
+    if (error) return toast.error(error.message);
+
+    toast.success("6-digit OTP code sent to your email!");
+    setStep("otp");
+  }
+
+  async function onVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    const cleanToken = otpToken.trim();
+    if (cleanToken.length < 6) {
+      return toast.error("Please enter the complete 6-digit OTP code.");
+    }
+    setLoading(true);
+
+    let { error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: cleanToken,
+      type: "recovery",
+    });
+
+    if (error) {
+      const retry = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: cleanToken,
+        type: "email",
+      });
+      if (!retry.error) error = null;
+    }
+
+    setLoading(false);
+    if (error) return toast.error(error.message || "Invalid or expired OTP code.");
+
+    toast.success("OTP verified successfully!");
+    setHasSession(true);
+    setStep("password");
+  }
+
+  async function onSubmitPassword(e: React.FormEvent) {
     e.preventDefault();
     if (password.length < 6) return toast.error("Password must be at least 6 characters");
     if (password !== confirm) return toast.error("Passwords do not match");
@@ -39,7 +102,7 @@ export default function ResetPasswordPage() {
     const { error } = await supabase.auth.updateUser({ password });
     setLoading(false);
     if (error) return toast.error(error.message);
-    toast.success("Password updated. You're signed in.");
+    toast.success("Password updated successfully. You are signed in!");
     navigate("/home");
   }
 
@@ -59,19 +122,80 @@ export default function ResetPasswordPage() {
             <div className="mt-8 flex items-center justify-center">
               <Loader2 className="w-5 h-5 animate-spin text-primary" />
             </div>
-          ) : !hasSession ? (
-            <div className="mt-6 space-y-4">
-              <p className="text-sm text-muted-foreground">
-                This reset link is invalid or has expired. Request a new one from the sign in page.
-              </p>
-              <Button asChild className="w-full">
+          ) : !hasSession && step === "email" ? (
+            <form onSubmit={onSendOtp} className="mt-6 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="r-email">Email Address</Label>
+                <Input
+                  id="r-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+              </div>
+              <Button type="submit" disabled={loading || !email} className="w-full shadow-glow" size="lg">
+                {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                Send 6-Digit OTP
+              </Button>
+              <Button asChild variant="outline" className="w-full">
                 <Link to="/auth">
                   <ArrowLeft className="w-4 h-4 mr-2" /> Back to sign in
                 </Link>
               </Button>
-            </div>
+            </form>
+          ) : !hasSession && step === "otp" ? (
+            <form onSubmit={onVerifyOtp} className="mt-6 space-y-4">
+              <p className="text-sm text-muted-foreground">
+                We sent a 6-digit OTP code to <span className="font-medium text-foreground">{email}</span>.
+              </p>
+              <div className="space-y-3 flex flex-col items-center">
+                <Label htmlFor="r-otp" className="w-full text-left">6-Digit OTP Code</Label>
+                <InputOTP
+                  id="r-otp"
+                  maxLength={6}
+                  value={otpToken}
+                  onChange={(val) => setOtpToken(val.replace(/\D/g, ""))}
+                  containerClassName="justify-center py-2"
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} className="w-10 h-12 text-lg font-bold text-primary" />
+                    <InputOTPSlot index={1} className="w-10 h-12 text-lg font-bold text-primary" />
+                    <InputOTPSlot index={2} className="w-10 h-12 text-lg font-bold text-primary" />
+                  </InputOTPGroup>
+                  <InputOTPSeparator />
+                  <InputOTPGroup>
+                    <InputOTPSlot index={3} className="w-10 h-12 text-lg font-bold text-primary" />
+                    <InputOTPSlot index={4} className="w-10 h-12 text-lg font-bold text-primary" />
+                    <InputOTPSlot index={5} className="w-10 h-12 text-lg font-bold text-primary" />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+              <div className="flex items-center justify-between text-xs pt-1">
+                <button
+                  type="button"
+                  onClick={() => setStep("email")}
+                  className="text-muted-foreground hover:underline"
+                >
+                  Change Email
+                </button>
+                <button
+                  type="button"
+                  onClick={onSendOtp}
+                  disabled={loading}
+                  className="text-primary font-medium hover:underline disabled:opacity-50"
+                >
+                  Resend Code
+                </button>
+              </div>
+              <Button type="submit" disabled={loading || otpToken.length < 6} className="w-full shadow-glow" size="lg">
+                {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                Verify OTP
+              </Button>
+            </form>
           ) : (
-            <form onSubmit={onSubmit} className="mt-6 space-y-4">
+            <form onSubmit={onSubmitPassword} className="mt-6 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="np">New password</Label>
                 <Input
@@ -81,6 +205,7 @@ export default function ResetPasswordPage() {
                   minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
                 />
               </div>
               <div className="space-y-2">
@@ -92,9 +217,10 @@ export default function ResetPasswordPage() {
                   minLength={6}
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
+                  placeholder="••••••••"
                 />
               </div>
-              <Button type="submit" disabled={loading} className="w-full shadow-glow" size="lg">
+              <Button type="submit" disabled={loading || !password || !confirm} className="w-full shadow-glow" size="lg">
                 {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                 Update password
               </Button>

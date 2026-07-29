@@ -136,9 +136,16 @@ export default function DonorProfile() {
                 label="Available hours"
                 value={`${donor.start_time || "—"} – ${donor.end_time || "—"}`}
               />
+              {donor.address && (
+                <Row
+                  icon={<MapPin className="w-4 h-4 text-primary" />}
+                  label="Address"
+                  value={donor.address}
+                />
+              )}
               <Row
                 icon={<MapPin className="w-4 h-4" />}
-                label="Location"
+                label="Coordinates"
                 value={`${donor.latitude.toFixed(4)}, ${donor.longitude.toFixed(4)}`}
               />
             </div>

@@ -133,6 +133,7 @@ export type Database = {
       };
       donors: {
         Row: {
+          address: string | null;
           available_days: string[];
           blood_group: string;
           created_at: string;
@@ -149,6 +150,7 @@ export type Database = {
           whatsapp_number: string;
         };
         Insert: {
+          address?: string | null;
           available_days?: string[];
           blood_group: string;
           created_at?: string;
@@ -165,6 +167,7 @@ export type Database = {
           whatsapp_number: string;
         };
         Update: {
+          address?: string | null;
           available_days?: string[];
           blood_group?: string;
           created_at?: string;

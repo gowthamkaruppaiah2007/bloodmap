@@ -30,6 +30,7 @@ export default function DonorSetup() {
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("18:00");
   const [available, setAvailable] = useState(true);
+  const [address, setAddress] = useState("");
   const [emergency, setEmergency] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -55,10 +56,23 @@ export default function DonorSetup() {
     if (!("geolocation" in navigator)) return toast.error("Geolocation not supported");
     setLocLoading(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setCoords({ lat, lng });
         setLocLoading(false);
         toast.success("Location captured");
+
+        // Reverse lookup address
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+          const data = await res.json();
+          if (data?.display_name && !address) {
+            setAddress(data.display_name);
+          }
+        } catch {
+          // ignore error
+        }
       },
       (err) => {
         setLocLoading(false);
@@ -81,6 +95,7 @@ export default function DonorSetup() {
       .select("full_name")
       .eq("id", u.user.id)
       .maybeSingle();
+
     const { error } = await supabase.from("donors").upsert(
       {
         user_id: u.user.id,
@@ -89,6 +104,7 @@ export default function DonorSetup() {
         whatsapp_number: whatsapp,
         latitude: coords.lat,
         longitude: coords.lng,
+        address: address.trim() || null,
         available_days: days,
         start_time: startTime,
         end_time: endTime,
@@ -97,6 +113,13 @@ export default function DonorSetup() {
       },
       { onConflict: "user_id" },
     );
+
+    // Update profile address and user_type
+    await supabase.from("profiles").update({
+      user_type: "donor",
+      address: address.trim() || null,
+    }).eq("id", u.user.id);
+
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("You're now a registered donor!");
@@ -139,6 +162,16 @@ export default function DonorSetup() {
                 onChange={(e) => setWhatsapp(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="donor-addr">Residential Address</Label>
+            <Input
+              id="donor-addr"
+              placeholder="Street, City, Landmark, Pincode (e.g. 12 Main St, Chennai)"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
           </div>
 
           <div className="space-y-2">

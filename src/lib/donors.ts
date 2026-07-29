@@ -11,6 +11,7 @@ export interface Donor {
   end_time: string | null;
   is_available: boolean;
   emergency_contact?: string | null;
+  address?: string | null;
   updated_at: string;
 }
 

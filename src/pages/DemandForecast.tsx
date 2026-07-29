@@ -7,13 +7,8 @@ import {
   AlertTriangle,
   Loader2,
   Activity,
-  Cpu,
-  Zap,
-  CheckCircle2,
-  XCircle,
+  ArrowLeft,
   Sparkles,
-  ShieldCheck,
-  Search,
 } from "lucide-react";
 import {
   AreaChart,
@@ -23,12 +18,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
-  BarChart,
-  Bar,
 } from "recharts";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -36,14 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { BLOOD_GROUPS } from "@/lib/donors";
-import {
-  forecastDemand,
-  fetchMlPredictionsStats,
-  type DemandForecastResult,
-  type MlPredictionsTelemetry,
-} from "@/lib/ml.functions";
+import { forecastDemand, type DemandForecastResult } from "@/lib/ml.functions";
 import Navbar from "@/components/Navbar";
 
 export default function DemandForecast() {
@@ -51,68 +36,18 @@ export default function DemandForecast() {
   const [bloodGroup, setBloodGroup] = useState<string>("All");
   const [region, setRegion] = useState<string>("Global");
   const [forecastData, setForecastData] = useState<DemandForecastResult | null>(null);
-  const [mlTelemetry, setMlTelemetry] = useState<MlPredictionsTelemetry | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Live AI Donor Eligibility Evaluator state
-  const [testAge, setTestAge] = useState<number>(25);
-  const [testWeight, setTestWeight] = useState<number>(65);
-  const [testHgb, setTestHgb] = useState<number>(14.2);
-  const [testBg, setTestBg] = useState<string>("O+");
-  const [evalResult, setEvalResult] = useState<{
-    status: "Eligible" | "Not Eligible";
-    confidence: number;
-    reasons: string[];
-  } | null>(null);
-
   useEffect(() => {
-    document.title = "Demand Forecast & ML Analytics · BloodMap AI";
-    loadForecastAndTelemetry();
+    document.title = "Demand Forecast · BloodMap AI";
+    loadForecast();
   }, [horizon, bloodGroup, region]);
 
-  async function loadForecastAndTelemetry() {
+  async function loadForecast() {
     setLoading(true);
-    const [fc, telemetry] = await Promise.all([
-      forecastDemand({ horizonDays: horizon, bloodGroup, region }),
-      fetchMlPredictionsStats(),
-    ]);
-    setForecastData(fc);
-    setMlTelemetry(telemetry);
+    const res = await forecastDemand({ horizonDays: horizon, bloodGroup, region });
+    setForecastData(res);
     setLoading(false);
-  }
-
-  function handleEvaluateEligibility(e: React.FormEvent) {
-    e.preventDefault();
-    const reasons: string[] = [];
-    let eligible = true;
-
-    if (testAge < 18 || testAge > 65) {
-      eligible = false;
-      reasons.push(`Age must be between 18 and 65 years (given: ${testAge})`);
-    } else {
-      reasons.push(`Age ${testAge} within eligible donor range (18–65)`);
-    }
-
-    if (testWeight < 50) {
-      eligible = false;
-      reasons.push(`Weight must be at least 50 kg (given: ${testWeight} kg)`);
-    } else {
-      reasons.push(`Weight ${testWeight} kg meets minimum requirement (>=50 kg)`);
-    }
-
-    if (testHgb < 12.5) {
-      eligible = false;
-      reasons.push(`Hemoglobin level must be >= 12.5 g/dL (given: ${testHgb} g/dL)`);
-    } else {
-      reasons.push(`Hemoglobin ${testHgb} g/dL is healthy for donation`);
-    }
-
-    const confidence = eligible ? 0.88 : 0.82;
-    setEvalResult({
-      status: eligible ? "Eligible" : "Not Eligible",
-      confidence,
-      reasons,
-    });
   }
 
   return (
@@ -124,10 +59,10 @@ export default function DemandForecast() {
         <section className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold flex items-center gap-2">
-              <TrendingUp className="w-7 h-7 text-primary" /> Demand Forecast & ML Analytics
+              <TrendingUp className="w-7 h-7 text-primary" /> Blood Request Demand Forecast
             </h1>
             <p className="text-muted-foreground text-xs sm:text-sm mt-1">
-              Time-series predictive models and real-time inference telemetry analyzing 1,000+ logged predictions in Supabase.
+              Time-series predictive model estimating blood demand spikes by region and blood group.
             </p>
           </div>
 
@@ -172,31 +107,38 @@ export default function DemandForecast() {
           </div>
         </section>
 
-        {/* Stats Grid */}
+        {/* Clean Forecast Summary Cards */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard
-            title="Total Logged Predictions"
-            value={mlTelemetry ? `${mlTelemetry.totalPredictions.toLocaleString()} Records` : "1,000 Records"}
-            icon={<Cpu className="w-5 h-5 text-indigo-500" />}
+            title="Total Projected Demand"
+            value={forecastData ? `${forecastData.totalProjected} units` : "—"}
+            icon={<Droplet className="w-5 h-5 text-red-500 fill-red-500" />}
           />
           <StatCard
-            title="Average Latency"
-            value={mlTelemetry ? `${mlTelemetry.avgLatencyMs} ms` : "185 ms"}
-            icon={<Zap className="w-5 h-5 text-amber-500" />}
+            title="Peak Demand Day"
+            value={
+              forecastData?.peakDay
+                ? new Date(forecastData.peakDay).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "—"
+            }
+            icon={<Calendar className="w-5 h-5 text-blue-500" />}
           />
           <StatCard
-            title="Donor Eligibility Rate"
-            value={mlTelemetry ? `${mlTelemetry.eligibilityRate}% Eligible` : "62% Eligible"}
-            icon={<ShieldCheck className="w-5 h-5 text-emerald-500" />}
+            title="High-Risk Blood Groups"
+            value="O- & A-"
+            icon={<AlertTriangle className="w-5 h-5 text-amber-500" />}
           />
           <StatCard
-            title="Model MAPE Accuracy"
-            value="89.4% MAPE"
-            icon={<Activity className="w-5 h-5 text-primary" />}
+            title="Forecast Horizon"
+            value={`${horizon} Days`}
+            icon={<Activity className="w-5 h-5 text-emerald-500" />}
           />
         </section>
 
-        {/* Time-Series Demand Forecast Chart */}
+        {/* Time-Series Chart Container */}
         <section className="glass-card rounded-3xl p-4 sm:p-8 space-y-4 shadow-lg border border-border">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
@@ -256,162 +198,6 @@ export default function DemandForecast() {
                   />
                 </AreaChart>
               </ResponsiveContainer>
-            </div>
-          )}
-        </section>
-
-        {/* AI Donor Eligibility Evaluator Tool (Powered by 1000 Predictions) */}
-        <section className="glass-card rounded-3xl p-6 border border-border shadow-lg space-y-4">
-          <div className="flex items-center gap-3 border-b border-border pb-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold">AI Donor Eligibility Evaluator</h2>
-              <p className="text-xs text-muted-foreground">
-                Test your eligibility in real time using rules trained on Supabase's 1,000 prediction records
-              </p>
-            </div>
-          </div>
-
-          <form onSubmit={handleEvaluateEligibility} className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="t-age">Age (Years)</Label>
-              <Input
-                id="t-age"
-                type="number"
-                min={15}
-                max={80}
-                value={testAge}
-                onChange={(e) => setTestAge(parseInt(e.target.value) || 0)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="t-weight">Weight (kg)</Label>
-              <Input
-                id="t-weight"
-                type="number"
-                min={30}
-                max={150}
-                value={testWeight}
-                onChange={(e) => setTestWeight(parseFloat(e.target.value) || 0)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="t-hgb">Hemoglobin (g/dL)</Label>
-              <Input
-                id="t-hgb"
-                type="number"
-                step="0.1"
-                min={5}
-                max={20}
-                value={testHgb}
-                onChange={(e) => setTestHgb(parseFloat(e.target.value) || 0)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="t-bg">Blood Group</Label>
-              <select
-                id="t-bg"
-                value={testBg}
-                onChange={(e) => setTestBg(e.target.value)}
-                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary"
-              >
-                {BLOOD_GROUPS.map((bg) => (
-                  <option key={bg} value={bg}>{bg}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="sm:col-span-2 md:col-span-4 flex justify-end pt-2">
-              <Button type="submit" className="shadow-glow px-6">
-                <Sparkles className="w-4 h-4 mr-2" /> Evaluate Eligibility
-              </Button>
-            </div>
-          </form>
-
-          {evalResult && (
-            <div className={`mt-4 p-4 rounded-2xl border ${evalResult.status === "Eligible" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-200" : "bg-rose-500/10 border-rose-500/30 text-rose-950 dark:text-rose-200"}`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 font-bold text-lg">
-                  {evalResult.status === "Eligible" ? (
-                    <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                  ) : (
-                    <XCircle className="w-6 h-6 text-rose-600" />
-                  )}
-                  <span>Status: {evalResult.status}</span>
-                </div>
-                <Badge variant={evalResult.status === "Eligible" ? "default" : "destructive"}>
-                  {(evalResult.confidence * 100).toFixed(0)}% AI Confidence
-                </Badge>
-              </div>
-
-              <ul className="mt-3 text-xs space-y-1 pl-6 list-disc opacity-90">
-                {evalResult.reasons.map((r, idx) => (
-                  <li key={idx}>{r}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
-
-        {/* Live Supabase ML Predictions Telemetry Log Table */}
-        <section className="glass-card rounded-3xl p-4 sm:p-6 border border-border shadow-lg">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 border-b border-border pb-3">
-            <div>
-              <h3 className="font-bold text-base sm:text-lg flex items-center gap-2">
-                <Cpu className="w-5 h-5 text-indigo-500" /> Live Supabase ML Prediction Telemetry Log
-              </h3>
-              <p className="text-xs text-muted-foreground">Displaying recent inference records from the 1,000 prediction dataset in PostgreSQL</p>
-            </div>
-            <Badge variant="outline" className="w-fit text-xs font-semibold">
-              1,000 Records Active
-            </Badge>
-          </div>
-
-          {loading || !mlTelemetry ? (
-            <div className="py-8 grid place-items-center">
-              <Loader2 className="w-5 h-5 animate-spin text-primary" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs sm:text-sm">
-                <thead className="text-left text-muted-foreground border-b">
-                  <tr>
-                    <th className="pb-3 px-2">Model Name</th>
-                    <th className="pb-3 px-2">Version</th>
-                    <th className="pb-3 px-2">Input Attributes</th>
-                    <th className="pb-3 px-2">Prediction Output</th>
-                    <th className="pb-3 px-2">Latency</th>
-                    <th className="pb-3 px-2">Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mlTelemetry.recentLogs.map((log) => {
-                    const isEligible = log.output?.prediction === "Eligible";
-                    return (
-                      <tr key={log.id} className="border-b hover:bg-muted/30">
-                        <td className="py-3 px-2 font-medium text-foreground">{log.model_name}</td>
-                        <td className="py-3 px-2 text-muted-foreground font-mono text-xs">{log.model_version}</td>
-                        <td className="py-3 px-2 text-xs font-mono">
-                          {Boolean(log.input?.blood_group) && <span className="mr-2 font-bold text-primary">{String(log.input.blood_group)}</span>}
-                          {Boolean(log.input?.age) && <span>Age: {String(log.input.age)}, </span>}
-                          {Boolean(log.input?.weight) && <span>W: {String(log.input.weight)}kg</span>}
-                        </td>
-                        <td className="py-3 px-2">
-                          <Badge variant={isEligible ? "default" : "secondary"} className={`text-xs ${isEligible ? "bg-emerald-500 hover:bg-emerald-600 text-white" : ""}`}>
-                            {log.output?.prediction || "Unknown"}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-2 font-mono text-xs text-muted-foreground">{log.latency_ms} ms</td>
-                        <td className="py-3 px-2 text-xs text-muted-foreground">
-                          {new Date(log.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
             </div>
           )}
         </section>

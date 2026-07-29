@@ -47,19 +47,26 @@ export default function ResetPasswordPage() {
 
   async function onSendOtp(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) return toast.error("Please enter a valid email address.");
+    const cleanEmail = email.trim();
+    if (!cleanEmail) return toast.error("Please enter a valid email address.");
     setLoading(true);
 
-    let { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+    let { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
     if (error) {
-      const retry = await supabase.auth.signInWithOtp({ email: email.trim() });
+      const retry = await supabase.auth.signInWithOtp({ email: cleanEmail });
       if (!retry.error) error = null;
+      else error = retry.error;
     }
 
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      if (/rate limit/i.test(error.message)) {
+        return toast.error("Email rate limit exceeded. Please wait a few minutes or configure Custom SMTP in Supabase.");
+      }
+      return toast.error(error.message);
+    }
 
-    toast.success("6-digit OTP code sent to your email!");
+    toast.success("6-digit OTP sent! Please check your inbox and Spam folder.", { duration: 6000 });
     setStep("otp");
   }
 

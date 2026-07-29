@@ -309,3 +309,100 @@ export async function logPrediction(params: {
     console.error("Failed to log ML prediction:", err);
   }
 }
+
+export interface MlPredictionsTelemetry {
+  totalPredictions: number;
+  avgLatencyMs: number;
+  eligibleCount: number;
+  ineligibleCount: number;
+  eligibilityRate: number;
+  models: Array<{ name: string; count: number }>;
+  bloodGroups: Array<{ group: string; count: number }>;
+  recentLogs: Array<{
+    id: string;
+    model_name: string;
+    model_version: string;
+    request_type: string;
+    input: Record<string, unknown>;
+    output: { prediction?: string; confidence?: number };
+    latency_ms: number;
+    created_at: string;
+  }>;
+}
+
+// Analytics aggregator from the 1,000 Supabase ML predictions
+export async function fetchMlPredictionsStats(): Promise<MlPredictionsTelemetry> {
+  try {
+    const { data, count, error } = await supabase
+      .from("ml_predictions")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false });
+
+    if (error || !data) {
+      throw error || new Error("No ML predictions found");
+    }
+
+    let totalLatency = 0;
+    let eligibleCount = 0;
+    let ineligibleCount = 0;
+    const modelCounts: Record<string, number> = {};
+    const bloodGroupCounts: Record<string, number> = {};
+
+    data.forEach((row) => {
+      if (row.latency_ms) totalLatency += row.latency_ms;
+
+      const output = row.output as { prediction?: string; confidence?: number } | null;
+      if (output?.prediction === "Eligible") eligibleCount++;
+      else if (output?.prediction === "Not Eligible") ineligibleCount++;
+
+      const modelName = row.model_name || "Unknown Model";
+      modelCounts[modelName] = (modelCounts[modelName] || 0) + 1;
+
+      const input = row.input as { blood_group?: string } | null;
+      if (input?.blood_group) {
+        bloodGroupCounts[input.blood_group] = (bloodGroupCounts[input.blood_group] || 0) + 1;
+      }
+    });
+
+    const totalCount = count ?? data.length;
+    const avgLatencyMs = totalCount > 0 ? Math.round(totalLatency / totalCount) : 0;
+    const eligibilityRate = totalCount > 0 ? Math.round((eligibleCount / totalCount) * 100) : 0;
+
+    const models = Object.entries(modelCounts).map(([name, c]) => ({ name, count: c }));
+    const bloodGroups = Object.entries(bloodGroupCounts).map(([group, c]) => ({ group, count: c }));
+
+    const recentLogs = data.slice(0, 15).map((r) => ({
+      id: r.id,
+      model_name: r.model_name,
+      model_version: r.model_version,
+      request_type: r.request_type,
+      input: (r.input as Record<string, unknown>) || {},
+      output: (r.output as { prediction?: string; confidence?: number }) || {},
+      latency_ms: r.latency_ms || 0,
+      created_at: r.created_at,
+    }));
+
+    return {
+      totalPredictions: totalCount,
+      avgLatencyMs,
+      eligibleCount,
+      ineligibleCount,
+      eligibilityRate,
+      models,
+      bloodGroups,
+      recentLogs,
+    };
+  } catch (err) {
+    console.error("Error fetching ML prediction telemetry:", err);
+    return {
+      totalPredictions: 0,
+      avgLatencyMs: 0,
+      eligibleCount: 0,
+      ineligibleCount: 0,
+      eligibilityRate: 0,
+      models: [],
+      bloodGroups: [],
+      recentLogs: [],
+    };
+  }
+}

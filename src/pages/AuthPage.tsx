@@ -260,11 +260,7 @@ function LoginForm() {
           <Label htmlFor="login-password">Password</Label>
           <button
             type="button"
-            onClick={() => {
-              setForgotEmail(email);
-              setForgotStep("email");
-              setForgotOpen(true);
-            }}
+            onClick={() => navigate("/reset-password")}
             className="text-xs font-medium text-primary hover:underline"
           >
             Forgot password?

@@ -1,6 +1,6 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Droplet, Loader2, ArrowLeft } from "lucide-react";
+import { Droplet, Loader2, ArrowLeft, KeyRound, Mail, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,8 @@ export default function ResetPasswordPage() {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
   const [hasSession, setHasSession] = useState(false);
-  
-  // OTP flow state
+
+  // Dedicated 3-step page flow: "email" -> "otp" -> "password"
   const [step, setStep] = useState<"email" | "otp" | "password">("email");
   const [email, setEmail] = useState("");
   const [otpToken, setOtpToken] = useState("");
@@ -27,7 +27,7 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    document.title = "Reset password · BloodMap AI";
+    document.title = "Reset Password · BloodMap AI";
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" || session) {
         setHasSession(true);
@@ -45,6 +45,7 @@ export default function ResetPasswordPage() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Step 1: Send OTP to user email via SMTP
   async function onSendOtp(e: React.FormEvent) {
     e.preventDefault();
     const cleanEmail = email.trim();
@@ -61,15 +62,16 @@ export default function ResetPasswordPage() {
     setLoading(false);
     if (error) {
       if (/rate limit/i.test(error.message)) {
-        return toast.error("Email rate limit exceeded. Please wait a few minutes or configure Custom SMTP in Supabase.");
+        return toast.error("Email rate limit exceeded. Please wait a few minutes or check Custom SMTP in Supabase.");
       }
       return toast.error(error.message);
     }
 
-    toast.success("6-digit OTP sent! Please check your inbox and Spam folder.", { duration: 6000 });
+    toast.success("6-digit OTP code sent! Check your email inbox & Spam folder.", { duration: 6000 });
     setStep("otp");
   }
 
+  // Step 2: Validate 6-digit OTP code entered in UI
   async function onVerifyOtp(e: React.FormEvent) {
     e.preventDefault();
     const cleanToken = otpToken.trim();
@@ -96,42 +98,70 @@ export default function ResetPasswordPage() {
     setLoading(false);
     if (error) return toast.error(error.message || "Invalid or expired OTP code.");
 
-    toast.success("OTP verified successfully!");
+    toast.success("OTP Verified Successfully! Now enter your new password.");
     setHasSession(true);
     setStep("password");
   }
 
+  // Step 3: Set new password
   async function onSubmitPassword(e: React.FormEvent) {
     e.preventDefault();
-    if (password.length < 6) return toast.error("Password must be at least 6 characters");
-    if (password !== confirm) return toast.error("Passwords do not match");
+    if (password.length < 6) return toast.error("Password must be at least 6 characters.");
+    if (password !== confirm) return toast.error("Passwords do not match.");
     setLoading(true);
+
     const { error } = await supabase.auth.updateUser({ password });
     setLoading(false);
+
     if (error) return toast.error(error.message);
-    toast.success("Password updated successfully. You are signed in!");
+
+    toast.success("Password updated successfully! Redirecting...");
     navigate("/home");
   }
 
   return (
     <div className="min-h-screen grid place-items-center p-6 bg-[var(--gradient-soft)]">
       <div className="w-full max-w-md">
+        {/* Header Logo */}
         <div className="flex items-center gap-2 text-xl font-bold text-primary mb-8 justify-center">
           <Droplet className="w-6 h-6 fill-primary" /> BloodMap AI
         </div>
+
         <div className="glass-card rounded-2xl p-8">
-          <h1 className="text-2xl font-bold">Set a new password</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Choose a strong password you haven't used before.
-          </p>
+          {/* Step Badge Indicator */}
+          <div className="flex items-center justify-between border-b border-border pb-4 mb-6">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {step === "email" && <Mail className="w-4 h-4 text-primary" />}
+              {step === "otp" && <KeyRound className="w-4 h-4 text-primary" />}
+              {step === "password" && <CheckCircle2 className="w-4 h-4 text-primary" />}
+              <span>
+                {step === "email" && "Step 1 of 3: Enter Email"}
+                {step === "otp" && "Step 2 of 3: Enter OTP"}
+                {step === "password" && "Step 3 of 3: Create Password"}
+              </span>
+            </div>
+            <div className="flex gap-1">
+              <span className={`h-2 w-6 rounded-full transition-all ${step === "email" ? "bg-primary" : "bg-primary/30"}`} />
+              <span className={`h-2 w-6 rounded-full transition-all ${step === "otp" ? "bg-primary" : "bg-primary/30"}`} />
+              <span className={`h-2 w-6 rounded-full transition-all ${step === "password" ? "bg-primary" : "bg-primary/30"}`} />
+            </div>
+          </div>
 
           {!ready ? (
-            <div className="mt-8 flex items-center justify-center">
-              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <div className="py-12 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
-          ) : !hasSession && step === "email" ? (
-            <form onSubmit={onSendOtp} className="mt-6 space-y-4">
-              <div className="space-y-2">
+          ) : step === "email" ? (
+            /* PAGE 1: Enter Email */
+            <form onSubmit={onSendOtp} className="space-y-4">
+              <div>
+                <h1 className="text-2xl font-bold">Forgot Password?</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Enter your registered email address below to receive a 6-digit OTP verification code via email.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2">
                 <Label htmlFor="r-email">Email Address</Label>
                 <Input
                   id="r-email"
@@ -140,24 +170,33 @@ export default function ResetPasswordPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
+                  autoFocus
                 />
               </div>
-              <Button type="submit" disabled={loading || !email} className="w-full shadow-glow" size="lg">
-                {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                Send 6-Digit OTP
-              </Button>
-              <Button asChild variant="outline" className="w-full">
-                <Link to="/auth">
-                  <ArrowLeft className="w-4 h-4 mr-2" /> Back to sign in
-                </Link>
-              </Button>
+
+              <div className="pt-2 space-y-2">
+                <Button type="submit" disabled={loading || !email} className="w-full shadow-glow" size="lg">
+                  {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                  Send OTP Code
+                </Button>
+                <Button asChild variant="outline" className="w-full">
+                  <Link to="/auth">
+                    <ArrowLeft className="w-4 h-4 mr-2" /> Back to Login
+                  </Link>
+                </Button>
+              </div>
             </form>
-          ) : !hasSession && step === "otp" ? (
-            <form onSubmit={onVerifyOtp} className="mt-6 space-y-4">
-              <p className="text-sm text-muted-foreground">
-                We sent a 6-digit OTP code to <span className="font-medium text-foreground">{email}</span>.
-              </p>
-              <div className="space-y-3 flex flex-col items-center">
+          ) : step === "otp" ? (
+            /* PAGE 2: Enter 6-Digit OTP */
+            <form onSubmit={onVerifyOtp} className="space-y-4">
+              <div>
+                <h1 className="text-2xl font-bold">Enter Verification OTP</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  We sent a 6-digit OTP code to <span className="font-semibold text-foreground">{email}</span>. Please enter it below.
+                </p>
+              </div>
+
+              <div className="space-y-3 flex flex-col items-center py-2">
                 <Label htmlFor="r-otp" className="w-full text-left">6-Digit OTP Code</Label>
                 <InputOTP
                   id="r-otp"
@@ -179,6 +218,7 @@ export default function ResetPasswordPage() {
                   </InputOTPGroup>
                 </InputOTP>
               </div>
+
               <div className="flex items-center justify-between text-xs pt-1">
                 <button
                   type="button"
@@ -196,15 +236,26 @@ export default function ResetPasswordPage() {
                   Resend Code
                 </button>
               </div>
-              <Button type="submit" disabled={loading || otpToken.length < 6} className="w-full shadow-glow" size="lg">
-                {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                Verify OTP
-              </Button>
+
+              <div className="pt-2">
+                <Button type="submit" disabled={loading || otpToken.length < 6} className="w-full shadow-glow" size="lg">
+                  {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                  Verify OTP Code
+                </Button>
+              </div>
             </form>
           ) : (
-            <form onSubmit={onSubmitPassword} className="mt-6 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="np">New password</Label>
+            /* PAGE 3: Create New Password */
+            <form onSubmit={onSubmitPassword} className="space-y-4">
+              <div>
+                <h1 className="text-2xl font-bold">Create New Password</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  OTP verified! Enter your new password below to update your account.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <Label htmlFor="np">New Password</Label>
                 <Input
                   id="np"
                   type="password"
@@ -213,10 +264,12 @@ export default function ResetPasswordPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  autoFocus
                 />
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="np2">Confirm password</Label>
+                <Label htmlFor="np2">Confirm New Password</Label>
                 <Input
                   id="np2"
                   type="password"
@@ -227,10 +280,13 @@ export default function ResetPasswordPage() {
                   placeholder="••••••••"
                 />
               </div>
-              <Button type="submit" disabled={loading || !password || !confirm} className="w-full shadow-glow" size="lg">
-                {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                Update password
-              </Button>
+
+              <div className="pt-2">
+                <Button type="submit" disabled={loading || !password || !confirm} className="w-full shadow-glow" size="lg">
+                  {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                  Save New Password
+                </Button>
+              </div>
             </form>
           )}
         </div>

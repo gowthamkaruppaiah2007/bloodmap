@@ -318,6 +318,33 @@ export default function UserProfile() {
           </div>
         </div>
 
+        {/* Register as Donor Banner for Non-Donors */}
+        {!donorId && (
+          <div className="rounded-3xl p-6 bg-gradient-to-r from-red-600 via-rose-600 to-primary text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+            <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="space-y-2 text-center md:text-left relative z-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-xs font-semibold backdrop-blur">
+                <Heart className="w-3.5 h-3.5 fill-white" /> Save Lives in Your Community
+              </div>
+              <h2 className="text-2xl font-extrabold tracking-tight">Become a Registered Donor</h2>
+              <p className="text-sm text-white/90 max-w-xl">
+                You are currently registered as a Blood Seeker. Registering as a donor allows people in critical emergency need nearby to find your blood group when seconds count.
+              </p>
+            </div>
+            <Button
+              asChild
+              size="lg"
+              className="bg-white text-red-600 hover:bg-white/90 font-extrabold px-6 py-6 rounded-2xl shadow-lg shrink-0 relative z-10 hover:scale-105 transition-transform"
+            >
+              <Link to="/donor-setup" className="flex items-center gap-2">
+                <Droplet className="w-5 h-5 fill-red-600" />
+                Register as a Donor Now
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </Button>
+          </div>
+        )}
+
         {/* Profile Edit & Address Form */}
         <form onSubmit={handleSaveProfile} className="space-y-6">
           {/* Section 1: My Address (Highlighted as requested) */}
@@ -411,13 +438,15 @@ export default function UserProfile() {
 
               <div className="space-y-2">
                 <Label htmlFor="user-role" className="font-semibold">Account Role</Label>
-                <div className="flex items-center gap-3 pt-1">
-                  <Badge variant={userType === "donor" ? "default" : "outline"} className="px-3 py-1 text-sm font-semibold">
-                    {userType === "donor" ? "Registered Donor" : "Blood Seeker"}
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <Badge variant={donorId ? "default" : "secondary"} className="px-3 py-1.5 text-sm font-semibold">
+                    {donorId ? "Registered Donor" : "Blood Seeker (Non-Donor)"}
                   </Badge>
-                  {userType === "seeker" && (
-                    <Button asChild variant="link" size="sm" className="text-primary text-xs p-0 h-auto">
-                      <Link to="/donor-setup">Switch to Donor &rarr;</Link>
+                  {!donorId && (
+                    <Button asChild size="sm" className="bg-red-600 hover:bg-red-700 text-white font-bold shadow-glow">
+                      <Link to="/donor-setup" className="flex items-center gap-1.5">
+                        <Heart className="w-4 h-4 fill-white" /> Register as a Donor
+                      </Link>
                     </Button>
                   )}
                 </div>

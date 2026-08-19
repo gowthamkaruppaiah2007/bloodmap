@@ -31,7 +31,18 @@ export default function Navbar() {
           .select("user_type")
           .eq("id", data.user.id)
           .maybeSingle();
-        setProfileType(p?.user_type ?? null);
+        
+        const { data: d } = await supabase
+          .from("donors")
+          .select("id")
+          .eq("user_id", data.user.id)
+          .maybeSingle();
+
+        if (d) {
+          setProfileType("donor");
+        } else {
+          setProfileType(p?.user_type ?? "seeker");
+        }
       }
     })();
   }, []);
@@ -107,7 +118,7 @@ export default function Navbar() {
             </Button>
           )}
 
-          {profileType === "seeker" && (
+          {userEmail && profileType !== "donor" && (
             <Button asChild variant="outline" size="sm" className="border-primary/40 text-primary font-semibold">
               <Link to="/donor-setup">
                 <Heart className="w-4 h-4 mr-1.5 text-red-500 fill-red-500" /> Become a Donor
@@ -182,7 +193,7 @@ export default function Navbar() {
               </Link>
             )}
 
-            {profileType === "seeker" && (
+            {userEmail && profileType !== "donor" && (
               <Link
                 to="/donor-setup"
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-primary bg-primary/5 hover:bg-primary/10 transition"

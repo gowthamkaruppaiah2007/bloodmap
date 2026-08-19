@@ -89,19 +89,50 @@ export default function DonorSetup() {
     if (days.length === 0) return toast.error("Pick at least one available day");
     setSaving(true);
     const { data: u } = await supabase.auth.getUser();
-    if (!u.user) return;
+    if (!u.user) {
+      setSaving(false);
+      return toast.error("User session not found");
+    }
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name")
+      .select("full_name, phone, address")
       .eq("id", u.user.id)
       .maybeSingle();
 
-    const { error } = await supabase.from("donors").upsert(
+    const fullName =
+      profile?.full_name?.trim() ||
+      (u.user.user_metadata?.full_name as string) ||
+      (u.user.user_metadata?.name as string) ||
+      u.user.email?.split("@")[0] ||
+      "Donor";
+
+    const userPhone = whatsapp.trim() || profile?.phone || (u.user.user_metadata?.phone as string) || "";
+
+    // 1. Guarantee profile row exists with user_type set to 'donor' via UPSERT
+    const { error: profileErr } = await supabase.from("profiles").upsert(
+      {
+        id: u.user.id,
+        full_name: fullName,
+        phone: userPhone,
+        email: u.user.email ?? "",
+        user_type: "donor",
+        address: address.trim() || profile?.address || null,
+      },
+      { onConflict: "id" }
+    );
+
+    if (profileErr) {
+      setSaving(false);
+      return toast.error(profileErr.message);
+    }
+
+    // 2. Upsert donor record
+    const { error: donorErr } = await supabase.from("donors").upsert(
       {
         user_id: u.user.id,
-        full_name: profile?.full_name ?? "",
+        full_name: fullName,
         blood_group: bloodGroup,
-        whatsapp_number: whatsapp,
+        whatsapp_number: whatsapp.trim(),
         latitude: coords.lat,
         longitude: coords.lng,
         address: address.trim() || null,
@@ -114,14 +145,8 @@ export default function DonorSetup() {
       { onConflict: "user_id" },
     );
 
-    // Update profile address and user_type
-    await supabase.from("profiles").update({
-      user_type: "donor",
-      address: address.trim() || null,
-    }).eq("id", u.user.id);
-
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (donorErr) return toast.error(donorErr.message);
     toast.success("You're now a registered donor!");
     navigate("/home");
   }

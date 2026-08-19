@@ -15,11 +15,34 @@ export default function Onboarding() {
   async function choose(type: "seeker" | "donor") {
     setLoading(type);
     const { data: u } = await supabase.auth.getUser();
-    if (!u.user) return;
-    const { error } = await supabase
+    if (!u.user) {
+      setLoading(null);
+      return;
+    }
+    const { data: profile } = await supabase
       .from("profiles")
-      .update({ user_type: type })
-      .eq("id", u.user.id);
+      .select("full_name, phone")
+      .eq("id", u.user.id)
+      .maybeSingle();
+
+    const fullName =
+      profile?.full_name?.trim() ||
+      (u.user.user_metadata?.full_name as string) ||
+      (u.user.user_metadata?.name as string) ||
+      u.user.email?.split("@")[0] ||
+      "User";
+
+    const { error } = await supabase.from("profiles").upsert(
+      {
+        id: u.user.id,
+        full_name: fullName,
+        email: u.user.email ?? "",
+        phone: profile?.phone ?? (u.user.user_metadata?.phone as string) ?? "",
+        user_type: type,
+      },
+      { onConflict: "id" }
+    );
+
     setLoading(null);
     if (error) return toast.error(error.message);
     if (type === "seeker") {

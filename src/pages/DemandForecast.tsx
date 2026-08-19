@@ -45,9 +45,9 @@ export default function DemandForecast() {
   const [loading, setLoading] = useState(true);
 
   // AI Donor Eligibility Evaluator state
-  const [testAge, setTestAge] = useState<number>(25);
-  const [testWeight, setTestWeight] = useState<number>(65);
-  const [testHgb, setTestHgb] = useState<number>(14.2);
+  const [testAge, setTestAge] = useState<number | string>(25);
+  const [testWeight, setTestWeight] = useState<number | string>(65);
+  const [testHgb, setTestHgb] = useState<number | string>(14.2);
   const [testBg, setTestBg] = useState<string>("O+");
   const [evalResult, setEvalResult] = useState<{
     status: "Eligible" | "Not Eligible";
@@ -58,7 +58,7 @@ export default function DemandForecast() {
   useEffect(() => {
     document.title = "Demand Forecast & Eligibility · BloodMap AI";
     loadForecast();
-  }, [horizon, bloodGroup, region]);
+  }, []);
 
   async function loadForecast() {
     setLoading(true);
@@ -69,28 +69,32 @@ export default function DemandForecast() {
 
   function handleEvaluateEligibility(e: React.FormEvent) {
     e.preventDefault();
+    const ageVal = typeof testAge === "number" ? testAge : parseFloat(testAge as string) || 0;
+    const weightVal = typeof testWeight === "number" ? testWeight : parseFloat(testWeight as string) || 0;
+    const hgbVal = typeof testHgb === "number" ? testHgb : parseFloat(testHgb as string) || 0;
+
     const reasons: string[] = [];
     let eligible = true;
 
-    if (testAge < 18 || testAge > 65) {
+    if (ageVal < 18 || ageVal > 65) {
       eligible = false;
-      reasons.push(`Age must be between 18 and 65 years (given: ${testAge})`);
+      reasons.push(`Age must be between 18 and 65 years (given: ${ageVal || 0})`);
     } else {
-      reasons.push(`Age ${testAge} is within eligible donor range (18–65 years)`);
+      reasons.push(`Age ${ageVal} is within eligible donor range (18–65 years)`);
     }
 
-    if (testWeight < 50) {
+    if (weightVal < 50) {
       eligible = false;
-      reasons.push(`Weight must be at least 50 kg (given: ${testWeight} kg)`);
+      reasons.push(`Weight must be at least 50 kg (given: ${weightVal || 0} kg)`);
     } else {
-      reasons.push(`Weight ${testWeight} kg meets minimum requirement (>= 50 kg)`);
+      reasons.push(`Weight ${weightVal} kg meets minimum requirement (>= 50 kg)`);
     }
 
-    if (testHgb < 12.5) {
+    if (hgbVal < 12.5) {
       eligible = false;
-      reasons.push(`Hemoglobin level must be >= 12.5 g/dL (given: ${testHgb} g/dL)`);
+      reasons.push(`Hemoglobin level must be >= 12.5 g/dL (given: ${hgbVal || 0} g/dL)`);
     } else {
-      reasons.push(`Hemoglobin ${testHgb} g/dL is healthy for blood donation`);
+      reasons.push(`Hemoglobin ${hgbVal} g/dL is healthy for blood donation`);
     }
 
     const confidence = eligible ? 0.88 : 0.82;
@@ -280,7 +284,7 @@ export default function DemandForecast() {
                 min={15}
                 max={80}
                 value={testAge}
-                onChange={(e) => setTestAge(parseInt(e.target.value) || 0)}
+                onChange={(e) => setTestAge(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
@@ -291,7 +295,7 @@ export default function DemandForecast() {
                 min={30}
                 max={150}
                 value={testWeight}
-                onChange={(e) => setTestWeight(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setTestWeight(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
@@ -303,7 +307,7 @@ export default function DemandForecast() {
                 min={5}
                 max={20}
                 value={testHgb}
-                onChange={(e) => setTestHgb(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setTestHgb(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">

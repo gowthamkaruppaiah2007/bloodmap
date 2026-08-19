@@ -63,7 +63,7 @@ export default function BloodRequests() {
   const [openModal, setOpenModal] = useState(false);
   const [patientName, setPatientName] = useState("");
   const [bloodGroup, setBloodGroup] = useState("O+");
-  const [units, setUnits] = useState(1);
+  const [units, setUnits] = useState<number | string>(1);
   const [urgency, setUrgency] = useState<"low" | "normal" | "high" | "critical">("normal");
   const [neededBy, setNeededBy] = useState("");
   const [reason, setReason] = useState("");
@@ -160,13 +160,15 @@ export default function BloodRequests() {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return setSubmitting(false);
 
+    const parsedUnits = typeof units === "number" ? units : Math.max(1, parseInt(units as string) || 1);
+
     const { data, error } = await supabase
       .from("blood_requests")
       .insert({
         user_id: u.user.id,
         patient_name: patientName || "Emergency Patient",
         blood_group: bloodGroup,
-        units_needed: units,
+        units_needed: parsedUnits,
         urgency,
         latitude: coords.lat,
         longitude: coords.lng,
@@ -434,7 +436,7 @@ export default function BloodRequests() {
                     max={20}
                     required
                     value={units}
-                    onChange={(e) => setUnits(parseInt(e.target.value) || 1)}
+                    onChange={(e) => setUnits(e.target.value)}
                   />
                 </div>
               </div>

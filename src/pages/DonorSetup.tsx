@@ -299,7 +299,8 @@ export default function DonorSetup() {
             <Label htmlFor="ec">Emergency contact (optional)</Label>
             <Input
               id="ec"
-              placeholder="Backup phone or name"
+              type="tel"
+              placeholder="+1 555 000 0000"
               value={emergency}
               onChange={(e) => setEmergency(e.target.value)}
             />

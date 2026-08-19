@@ -145,3 +145,13 @@
   font-family: var(--font-sans);
   border-radius: var(--radius-lg);
 }
+
+/* Smooth numeric input styling across browsers */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}

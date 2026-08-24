@@ -12,6 +12,7 @@ export interface Donor {
   is_available: boolean;
   emergency_contact?: string | null;
   address?: string | null;
+  avatar_url?: string | null;
   updated_at: string;
 }
 

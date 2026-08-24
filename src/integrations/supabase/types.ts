@@ -135,6 +135,7 @@ export type Database = {
         Row: {
           address: string | null;
           available_days: string[];
+          avatar_url?: string | null;
           blood_group: string;
           created_at: string;
           emergency_contact: string | null;
@@ -152,6 +153,7 @@ export type Database = {
         Insert: {
           address?: string | null;
           available_days?: string[];
+          avatar_url?: string | null;
           blood_group: string;
           created_at?: string;
           emergency_contact?: string | null;
@@ -169,6 +171,7 @@ export type Database = {
         Update: {
           address?: string | null;
           available_days?: string[];
+          avatar_url?: string | null;
           blood_group?: string;
           created_at?: string;
           emergency_contact?: string | null;
@@ -263,6 +266,7 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null;
+          avatar_url?: string | null;
           created_at: string;
           email: string;
           full_name: string;
@@ -273,6 +277,7 @@ export type Database = {
         };
         Insert: {
           address?: string | null;
+          avatar_url?: string | null;
           created_at?: string;
           email: string;
           full_name: string;
@@ -283,6 +288,7 @@ export type Database = {
         };
         Update: {
           address?: string | null;
+          avatar_url?: string | null;
           created_at?: string;
           email?: string;
           full_name?: string;

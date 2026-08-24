@@ -20,6 +20,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [profileType, setProfileType] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -28,9 +29,16 @@ export default function Navbar() {
         setUserEmail(data.user.email ?? null);
         const { data: p } = await supabase
           .from("profiles")
-          .select("user_type")
+          .select("user_type, avatar_url")
           .eq("id", data.user.id)
           .maybeSingle();
+
+        setAvatarUrl(
+          p?.avatar_url ??
+          (data.user.user_metadata?.avatar_url as string) ??
+          (data.user.user_metadata?.picture as string) ??
+          null
+        );
         
         const { data: d } = await supabase
           .from("donors")
@@ -113,7 +121,16 @@ export default function Navbar() {
               className="font-medium"
             >
               <Link to="/profile">
-                <User className="w-4 h-4 mr-1.5 text-primary" /> Profile
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Profile photo"
+                    className="w-5 h-5 rounded-full object-cover mr-1.5 border border-primary/30"
+                  />
+                ) : (
+                  <User className="w-4 h-4 mr-1.5 text-primary" />
+                )}
+                Profile
               </Link>
             </Button>
           )}
@@ -189,7 +206,16 @@ export default function Navbar() {
                   isActive("/profile") ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted"
                 }`}
               >
-                <User className="w-5 h-5 text-primary" /> My Profile & Address
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Profile photo"
+                    className="w-6 h-6 rounded-full object-cover border border-primary/30 shrink-0"
+                  />
+                ) : (
+                  <User className="w-5 h-5 text-primary" />
+                )}
+                My Profile & Address
               </Link>
             )}
 

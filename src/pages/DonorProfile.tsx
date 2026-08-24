@@ -109,8 +109,23 @@ export default function DonorProfile() {
         <div className="grid lg:grid-cols-[1fr_1.2fr] gap-6">
           <section className="glass-card rounded-2xl p-6 md:p-8">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl gradient-hero flex items-center justify-center text-primary-foreground text-2xl font-bold shadow-glow shrink-0">
-                {donor.blood_group}
+              <div className="relative shrink-0">
+                {donor.avatar_url ? (
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-primary/30 shadow-lg relative">
+                    <img
+                      src={donor.avatar_url}
+                      alt={donor.full_name}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-0 inset-x-0 bg-primary/90 text-white text-[10px] sm:text-xs font-black text-center py-0.5">
+                      {donor.blood_group}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl gradient-hero flex items-center justify-center text-primary-foreground text-2xl font-bold shadow-glow">
+                    {donor.blood_group}
+                  </div>
+                )}
               </div>
               <div>
                 <h1 className="text-xl sm:text-3xl font-bold">{donor.full_name}</h1>

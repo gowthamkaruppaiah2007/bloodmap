@@ -36,8 +36,22 @@ export default function DonorProfile() {
       const { data, error } = await supabase.rpc("get_donor_detail", { _donor_id: id });
       setLoading(false);
       if (error) return toast.error(error.message);
-      const row = Array.isArray(data) ? data[0] : data;
-      setDonor((row ?? null) as Donor | null);
+      const row = (Array.isArray(data) ? data[0] : data) as Donor | null;
+      if (row) {
+        if (!row.avatar_url && row.user_id) {
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("avatar_url")
+            .eq("id", row.user_id)
+            .maybeSingle();
+          if (prof?.avatar_url) {
+            row.avatar_url = prof.avatar_url;
+          }
+        }
+        setDonor(row);
+      } else {
+        setDonor(null);
+      }
     })();
     navigator.geolocation?.getCurrentPosition((pos) =>
       setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude }),

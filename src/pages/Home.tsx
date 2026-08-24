@@ -93,19 +93,33 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    (async () => {
+    async function loadDonors() {
       setLoading(true);
       const { data, error } = await supabase.rpc("get_available_donors");
       setLoading(false);
       if (error) return toast.error(error.message);
-      setDonors((data as Donor[]) ?? []);
-    })();
+
+      let list = (data as Donor[]) ?? [];
+
+      // Fetch profiles to guarantee avatar_url is attached for all donors
+      const { data: profs } = await supabase.from("profiles").select("id, avatar_url");
+      if (profs && profs.length > 0) {
+        const avatarMap = new Map(profs.map((p) => [p.id, p.avatar_url]));
+        list = list.map((d) => ({
+          ...d,
+          avatar_url: d.avatar_url || avatarMap.get(d.user_id) || null,
+        }));
+      }
+
+      setDonors(list);
+    }
+
+    loadDonors();
 
     const ch = supabase
       .channel("donors-feed")
-      .on("postgres_changes", { event: "*", schema: "public", table: "donors" }, async () => {
-        const { data } = await supabase.rpc("get_available_donors");
-        setDonors((data as Donor[]) ?? []);
+      .on("postgres_changes", { event: "*", schema: "public", table: "donors" }, () => {
+        loadDonors();
       })
       .subscribe();
 

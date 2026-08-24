@@ -287,12 +287,30 @@ function DonorCard({ donor }: { donor: Donor & { distanceKm?: number } }) {
     <div className="glass-card rounded-2xl p-5 hover:shadow-glow transition-all hover:-translate-y-1 flex flex-col justify-between space-y-4 border border-white/20">
       <div>
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="font-bold text-lg">{donor.full_name}</div>
-            <div className="text-xs sm:text-sm text-muted-foreground">
-              {donor.distanceKm != null
-                ? `${formatDistance(donor.distanceKm)} away`
-                : "Distance unknown"}
+          <div className="flex items-center gap-3">
+            {donor.avatar_url ? (
+              <img
+                src={donor.avatar_url}
+                alt={donor.full_name}
+                className="w-12 h-12 rounded-2xl object-cover border-2 border-primary/30 shadow-md shrink-0"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/15 to-rose-500/20 border border-primary/20 flex items-center justify-center font-extrabold text-primary text-sm shrink-0">
+                {donor.full_name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()
+                  .slice(0, 2)}
+              </div>
+            )}
+            <div>
+              <div className="font-bold text-lg leading-snug">{donor.full_name}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">
+                {donor.distanceKm != null
+                  ? `${formatDistance(donor.distanceKm)} away`
+                  : "Distance unknown"}
+              </div>
             </div>
           </div>
           <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground font-bold text-sm shadow-glow shrink-0">

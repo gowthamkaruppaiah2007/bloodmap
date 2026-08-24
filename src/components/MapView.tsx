@@ -78,15 +78,25 @@ export default function MapView({ center, donors, onSelect, route }: Props) {
         popupAnchor: [0, -38],
       });
       const km = center ? haversineKm(center, { lat: d.latitude, lng: d.longitude }) : null;
+      const avatarHtml = d.avatar_url
+        ? `<img src="${escapeHtml(d.avatar_url)}" style="width:38px;height:38px;border-radius:10px;object-fit:cover;border:1.5px solid #E53935;flex-shrink:0" />`
+        : `<div style="width:38px;height:38px;border-radius:10px;background:#fee2e2;color:#dc2626;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">${escapeHtml(d.full_name.slice(0, 2).toUpperCase())}</div>`;
       const popup = `
-        <div style="min-width:200px;font-family:Inter,system-ui">
-          <div style="font-weight:700;font-size:15px">${escapeHtml(d.full_name)}</div>
-          <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
-            <span style="background:#E53935;color:white;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700">${d.blood_group}</span>
-            ${km != null ? `<span style="color:#64748b;font-size:12px">${formatDistance(km)} away</span>` : ""}
+        <div style="min-width:210px;font-family:Inter,system-ui">
+          <div style="display:flex;align-items:center;gap:10px">
+            ${avatarHtml}
+            <div>
+              <div style="font-weight:700;font-size:15px;line-height:1.2">${escapeHtml(d.full_name)}</div>
+              <div style="display:flex;gap:6px;align-items:center;margin-top:3px">
+                <span style="background:#E53935;color:white;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700">${d.blood_group}</span>
+                ${km != null ? `<span style="color:#64748b;font-size:11px">${formatDistance(km)} away</span>` : ""}
+              </div>
+            </div>
           </div>
-          <div style="margin-top:6px;font-size:12px;color:#475569">${(d.available_days || []).map((x: string) => x.slice(0, 3)).join(", ") || "—"}</div>
-          <div style="font-size:12px;color:#475569">${d.start_time || ""}${d.start_time ? " – " : ""}${d.end_time || ""}</div>
+          <div style="margin-top:8px;padding-top:6px;border-top:1px solid #f1f5f9;font-size:12px;color:#475569">
+            <div><strong>Available:</strong> ${(d.available_days || []).map((x: string) => x.slice(0, 3)).join(", ") || "—"}</div>
+            <div><strong>Hours:</strong> ${d.start_time || "—"} – ${d.end_time || "—"}</div>
+          </div>
         </div>`;
       const marker = L.marker([d.latitude, d.longitude], { icon }).bindPopup(popup);
       marker.on("click", () => onSelect?.(d));

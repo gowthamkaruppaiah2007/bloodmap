@@ -22,30 +22,17 @@ function ProtectedRoute() {
   const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
-    // 1. Initial session check
-    supabase.auth.getSession().then(({ data }) => {
-      setAuthenticated(!!data.session);
+    (async () => {
+      const { data, error } = await supabase.auth.getUser();
+      setAuthenticated(!error && !!data.user);
       setChecking(false);
-    });
-
-    // 2. Listen to auth state changes without resetting checking state
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthenticated(!!session);
-      setChecking(false);
-    });
-
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    })();
   }, []);
 
   if (checking) {
     return (
       <div className="min-h-screen grid place-items-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-sm font-medium text-muted-foreground">Loading BloodMap AI...</p>
-        </div>
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
   }

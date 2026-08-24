@@ -107,6 +107,7 @@ export default function DonorProfile() {
     try {
       const url = `https://router.project-osrm.org/route/v1/driving/${center.lng},${center.lat};${donor.longitude},${donor.latitude}?overview=full&geometries=geojson`;
       const res = await fetch(url);
+      if (!res.ok) throw new Error("Could not calculate driving directions");
       const json = await res.json();
       const r = json?.routes?.[0];
       if (!r) throw new Error("No route found");
@@ -117,7 +118,12 @@ export default function DonorProfile() {
       setRoute(coords);
       setRouteInfo({ km: r.distance / 1000, min: r.duration / 60 });
     } catch (e: unknown) {
-      toast.error((e as Error)?.message || "Could not fetch directions");
+      const msg = (e as Error)?.message;
+      if (msg?.includes("Failed to fetch") || msg?.includes("NetworkError")) {
+        toast.error("Unable to reach directions service. Please check your internet connection.");
+      } else {
+        toast.error(msg || "Could not fetch directions");
+      }
     } finally {
       setRouting(false);
     }

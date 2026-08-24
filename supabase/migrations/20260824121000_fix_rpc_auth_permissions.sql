@@ -1,7 +1,4 @@
--- Migration to update get_available_donors and get_donor_detail RPC functions to include avatar_url
-DROP FUNCTION IF EXISTS public.get_available_donors();
-DROP FUNCTION IF EXISTS public.get_donor_detail(uuid);
-
+-- Migration to fix RPC permissions and allow get_available_donors, get_donor_detail, and get_open_blood_requests for authenticated & anon users
 CREATE OR REPLACE FUNCTION public.get_available_donors()
 RETURNS TABLE (
   id uuid,
@@ -70,4 +67,4 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.get_available_donors() TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_donor_detail(uuid) TO anon, authenticated, service_role;
-
+GRANT EXECUTE ON FUNCTION public.get_open_blood_requests() TO anon, authenticated, service_role;

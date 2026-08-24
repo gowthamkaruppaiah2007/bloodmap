@@ -20,10 +20,7 @@ export default function AuthPage() {
 
   useEffect(() => {
     document.title = "Sign in · BloodMap AI";
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate("/home");
-    });
-  }, [navigate]);
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">

@@ -33,10 +33,25 @@ export default function DonorProfile() {
     document.title = "Donor profile · BloodMap AI";
     if (!id) return;
     (async () => {
+      setLoading(true);
+      let row: Donor | null = null;
+
+      // 1. Try RPC function
       const { data, error } = await supabase.rpc("get_donor_detail", { _donor_id: id });
-      setLoading(false);
-      if (error) return toast.error(error.message);
-      const row = (Array.isArray(data) ? data[0] : data) as Donor | null;
+      if (!error && data) {
+        row = (Array.isArray(data) ? data[0] : data) as Donor | null;
+      }
+
+      // 2. Direct database query fallback if RPC returns null/error
+      if (!row) {
+        const { data: dData } = await supabase
+          .from("donors")
+          .select("*")
+          .eq("id", id)
+          .maybeSingle();
+        if (dData) row = dData as Donor;
+      }
+
       if (row) {
         if (!row.avatar_url && row.user_id) {
           const { data: prof } = await supabase
@@ -48,10 +63,11 @@ export default function DonorProfile() {
             row.avatar_url = prof.avatar_url;
           }
         }
-        setDonor(row);
+        setDonor({ ...row });
       } else {
         setDonor(null);
       }
+      setLoading(false);
     })();
     navigator.geolocation?.getCurrentPosition((pos) =>
       setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude }),

@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { Toaster } from "sonner";
 import { Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
 
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
@@ -17,57 +16,76 @@ import UserProfile from "./pages/UserProfile";
 import AdminDashboard from "./pages/AdminDashboard";
 import { NotFoundPage } from "./pages/NotFoundPage";
 
-function ProtectedRoute() {
-  const [checking, setChecking] = useState(true);
-  const [authenticated, setAuthenticated] = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase.auth.getUser();
-      setAuthenticated(!error && !!data.user);
-      setChecking(false);
-    })();
-  }, []);
-
-  if (checking) {
-    return (
-      <div className="min-h-screen grid place-items-center bg-background">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen grid place-items-center bg-background">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-sm font-medium text-muted-foreground">Loading BloodMap AI...</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  if (!authenticated) {
-    return <Navigate to="/auth" replace />;
-  }
+function ProtectedRoute() {
+  const { session, loading } = useAuth();
+
+  if (loading) return <LoadingScreen />;
+  if (!session) return <Navigate to="/auth" replace />;
 
   return <Outlet />;
 }
 
+function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { session, loading } = useAuth();
+
+  if (loading) return <LoadingScreen />;
+  if (session) return <Navigate to="/home" replace />;
+
+  return <>{children}</>;
+}
+
+function RootRedirect() {
+  const { session, loading } = useAuth();
+
+  if (loading) return <LoadingScreen />;
+  return <Navigate to={session ? "/home" : "/auth"} replace />;
+}
+
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/auth" replace />} />
-        <Route path="/auth" element={<AuthPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<RootRedirect />} />
+          <Route
+            path="/auth"
+            element={
+              <PublicOnlyRoute>
+                <AuthPage />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-        {/* Protected routes */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/home" element={<Home />} />
-          <Route path="/profile" element={<UserProfile />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/donor-setup" element={<DonorSetup />} />
-          <Route path="/donors/:id" element={<DonorProfile />} />
-          <Route path="/requests" element={<BloodRequests />} />
-          <Route path="/requests/:id" element={<RequestDetail />} />
-          <Route path="/forecast" element={<DemandForecast />} />
-        </Route>
+          {/* Protected routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/home" element={<Home />} />
+            <Route path="/profile" element={<UserProfile />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/donor-setup" element={<DonorSetup />} />
+            <Route path="/donors/:id" element={<DonorProfile />} />
+            <Route path="/requests" element={<BloodRequests />} />
+            <Route path="/requests/:id" element={<RequestDetail />} />
+            <Route path="/forecast" element={<DemandForecast />} />
+          </Route>
 
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-      <Toaster position="top-center" richColors closeButton />
-    </BrowserRouter>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+        <Toaster position="top-center" richColors closeButton />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
+

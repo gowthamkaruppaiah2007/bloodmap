@@ -55,11 +55,16 @@ export async function adminListUsers() {
 }
 
 export async function adminListDonors() {
-  const { data } = await supabaseAdmin
-    .from("donors")
-    .select("*")
-    .order("updated_at", { ascending: false });
-  return data ?? [];
+  const [{ data: donors }, { data: profiles }] = await Promise.all([
+    supabaseAdmin.from("donors").select("*").order("updated_at", { ascending: false }),
+    supabaseAdmin.from("profiles").select("id, avatar_url"),
+  ]);
+  const pmap = new Map((profiles ?? []).map((p) => [p.id, p.avatar_url]));
+
+  return (donors ?? []).map((d) => ({
+    ...d,
+    avatar_url: (d as any).avatar_url || pmap.get(d.user_id) || null,
+  }));
 }
 
 export async function adminDeleteUser(data: { userId: string }) {

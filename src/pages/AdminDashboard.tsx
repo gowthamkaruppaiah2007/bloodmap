@@ -488,7 +488,22 @@ function DonorsTab() {
             <tbody>
               {filtered.map((d) => (
                 <tr key={d.id} className="border-b hover:bg-muted/30">
-                  <td className="p-2 font-medium">{d.full_name}</td>
+                  <td className="p-2 font-medium">
+                    <div className="flex items-center gap-2">
+                      {d.avatar_url ? (
+                        <img
+                          src={d.avatar_url}
+                          alt={d.full_name}
+                          className="w-8 h-8 rounded-full object-cover border border-primary/30 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                          {d.full_name.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <span>{d.full_name}</span>
+                    </div>
+                  </td>
                   <td className="p-2">
                     <span className="px-2 py-0.5 rounded bg-red-500/10 text-red-600 font-semibold text-xs">
                       {d.blood_group}

@@ -364,15 +364,33 @@ function DonorMatchCard({
 
       <div>
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-lg sm:text-xl font-bold">{donor.full_name}</span>
-              <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-xs">
-                {donor.blood_group}
-              </span>
-            </div>
-            <div className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-              {formatDistance(donor.distanceKm)} away
+          <div className="flex items-center gap-3">
+            {donor.avatar_url ? (
+              <img
+                src={donor.avatar_url}
+                alt={donor.full_name}
+                className="w-12 h-12 rounded-2xl object-cover border-2 border-primary/30 shadow-md shrink-0"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/15 to-rose-500/20 border border-primary/20 flex items-center justify-center font-extrabold text-primary text-sm shrink-0">
+                {donor.full_name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()
+                  .slice(0, 2)}
+              </div>
+            )}
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-lg sm:text-xl font-bold">{donor.full_name}</span>
+                <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-xs">
+                  {donor.blood_group}
+                </span>
+              </div>
+              <div className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                {formatDistance(donor.distanceKm)} away
+              </div>
             </div>
           </div>
 

@@ -33,11 +33,27 @@ export default function DonorProfile() {
     document.title = "Donor profile · BloodMap AI";
     if (!id) return;
     (async () => {
+      setLoading(true);
+      let row: Donor | null = null;
+
+      // 1. Try RPC function
       const { data, error } = await supabase.rpc("get_donor_detail", { _donor_id: id });
-      setLoading(false);
-      if (error) return toast.error(error.message);
-      const row = (Array.isArray(data) ? data[0] : data) as Donor | null;
+      if (!error && data) {
+        row = (Array.isArray(data) ? data[0] : data) as Donor | null;
+      }
+
+      // 2. Direct database query fallback if RPC returns null/error
+      if (!row) {
+        const { data: dData } = await supabase
+          .from("donors")
+          .select("*")
+          .eq("id", id)
+          .maybeSingle();
+        if (dData) row = dData as Donor;
+      }
+
       if (row) {
+        // 3. Always fetch avatar_url from profiles table if missing
         if (!row.avatar_url && row.user_id) {
           const { data: prof } = await supabase
             .from("profiles")
@@ -48,11 +64,13 @@ export default function DonorProfile() {
             row.avatar_url = prof.avatar_url;
           }
         }
-        setDonor(row);
+        setDonor({ ...row });
       } else {
         setDonor(null);
       }
+      setLoading(false);
     })();
+
     navigator.geolocation?.getCurrentPosition((pos) =>
       setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
     );
@@ -125,25 +143,28 @@ export default function DonorProfile() {
             <div className="flex items-center gap-4">
               <div className="relative shrink-0">
                 {donor.avatar_url ? (
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-primary/30 shadow-lg relative">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl overflow-hidden border-4 border-background shadow-2xl relative group">
                     <img
                       src={donor.avatar_url}
                       alt={donor.full_name}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute bottom-0 inset-x-0 bg-primary/90 text-white text-[10px] sm:text-xs font-black text-center py-0.5">
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white text-[11px] font-black text-center py-1 tracking-wider uppercase">
                       {donor.blood_group}
                     </div>
                   </div>
                 ) : (
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl gradient-hero flex items-center justify-center text-primary-foreground text-2xl font-bold shadow-glow">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl gradient-hero flex items-center justify-center text-primary-foreground text-3xl font-extrabold shadow-glow border-4 border-background">
                     {donor.blood_group}
                   </div>
                 )}
               </div>
-              <div>
-                <h1 className="text-xl sm:text-3xl font-bold">{donor.full_name}</h1>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-1">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{donor.full_name}</h1>
+                </div>
+                <div className="text-xs sm:text-sm text-muted-foreground font-medium flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-primary shrink-0" />
                   {distance != null ? `${formatDistance(distance)} away` : "Distance unknown"}
                 </div>
               </div>

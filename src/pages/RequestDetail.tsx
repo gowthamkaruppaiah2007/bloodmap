@@ -31,11 +31,89 @@ export default function RequestDetail() {
   const [loading, setLoading] = useState(true);
   const [matchingLoading, setMatchingLoading] = useState(false);
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
+  const [acceptedDonors, setAcceptedDonors] = useState<
+    Array<{
+      id: string;
+      donor_id: string;
+      donor_user_id: string;
+      full_name: string;
+      blood_group: string;
+      phone: string;
+      status: string;
+      responded_at: string;
+    }>
+  >([]);
 
   useEffect(() => {
     document.title = "AI Donor Matches · BloodMap AI";
-    if (id) loadData(id);
+    if (id) {
+      loadData(id);
+      fetchAcceptedDonors(id);
+      setupRealtimeSubscription(id);
+    }
   }, [id]);
+
+  async function fetchAcceptedDonors(requestId: string) {
+    const { data, error } = await supabase
+      .from("request_responses")
+      .select(
+        `
+        id,
+        donor_id,
+        donor_user_id,
+        status,
+        responded_at,
+        donors (
+          full_name,
+          blood_group,
+          emergency_contact,
+          whatsapp_number
+        )
+      `,
+      )
+      .eq("request_id", requestId)
+      .eq("status", "accepted");
+
+    if (data) {
+      const formatted = data.map((item: any) => ({
+        id: item.id,
+        donor_id: item.donor_id,
+        donor_user_id: item.donor_user_id,
+        full_name: item.donors?.full_name || "Accepted Donor",
+        blood_group: item.donors?.blood_group || "O+",
+        phone: item.donors?.emergency_contact || item.donors?.whatsapp_number || "",
+        status: item.status,
+        responded_at: item.responded_at,
+      }));
+      setAcceptedDonors(formatted);
+    }
+  }
+
+  function setupRealtimeSubscription(requestId: string) {
+    const channel = supabase
+      .channel(`request-responses-realtime-${requestId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "request_responses",
+          filter: `request_id=eq.${requestId}`,
+        },
+        (payload) => {
+          fetchAcceptedDonors(requestId);
+          if (payload.new && (payload.new as any).status === "accepted") {
+            toast.success("🎉 A compatible donor has accepted your emergency blood request!");
+            setRequest((prev) => (prev ? { ...prev, status: "matched" } : null));
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }
 
   async function loadData(requestId: string) {
     setLoading(true);
@@ -219,6 +297,64 @@ export default function RequestDetail() {
               </a>
             </Button>
           </div>
+        )}
+
+        {/* Accepted Donors & Live Connections Section */}
+        {acceptedDonors.length > 0 && (
+          <section className="glass-card rounded-3xl p-6 border-2 border-emerald-500/40 bg-emerald-500/5 space-y-4 animate-in fade-in duration-300">
+            <div className="flex items-center gap-3 border-b border-emerald-500/20 pb-4">
+              <div className="p-2.5 rounded-xl bg-emerald-600 text-white shadow-md shadow-emerald-600/30">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
+                  Accepted Donors & Live Connections
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                  </span>
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Donors who responded [ACCEPT] to this emergency request in real time.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {acceptedDonors.map((donor) => (
+                <div
+                  key={donor.id}
+                  className="rounded-2xl bg-card p-4 border border-emerald-500/30 shadow-sm flex items-center justify-between gap-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-600/10 text-emerald-600 font-black text-lg flex items-center justify-center border border-emerald-500/20 shrink-0">
+                      {donor.blood_group}
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-foreground text-sm flex items-center gap-2">
+                        {donor.full_name}
+                        <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 border border-emerald-500/30">
+                          Accepted
+                        </span>
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Responded {new Date(donor.responded_at || Date.now()).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {donor.phone && (
+                    <a
+                      href={`tel:${donor.phone}`}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-md transition-all shrink-0"
+                    >
+                      <Phone className="w-4 h-4" /> Call Donor
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {/* Request Overview Card */}

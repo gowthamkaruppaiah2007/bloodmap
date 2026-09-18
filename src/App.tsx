@@ -3,6 +3,8 @@ import { Toaster } from "sonner";
 import { Loader2 } from "lucide-react";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useEmergencyAlerts } from "@/hooks/useEmergencyAlerts";
+import EmergencyRequestOverlay from "@/components/EmergencyRequestOverlay";
 
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
@@ -55,8 +57,18 @@ function RootRedirect() {
 
 function AppContent() {
   useNotifications();
+  const { activeEmergencyRequest, setActiveEmergencyRequest, donorCoords } = useEmergencyAlerts();
+
   return (
     <BrowserRouter>
+      {activeEmergencyRequest && (
+        <EmergencyRequestOverlay
+          request={activeEmergencyRequest}
+          donorCoords={donorCoords}
+          onClose={() => setActiveEmergencyRequest(null)}
+        />
+      )}
+
       <Routes>
         <Route path="/" element={<RootRedirect />} />
         <Route

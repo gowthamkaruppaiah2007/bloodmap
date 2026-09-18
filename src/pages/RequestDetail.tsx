@@ -163,27 +163,15 @@ export default function RequestDetail() {
       if (dData) setDonorProfile(dData as Donor);
     }
 
-    // 1. Fetch request details
-    const { data: reqData, error } = await supabase
-      .from("blood_requests")
-      .select("*")
-      .eq("id", requestId)
-      .maybeSingle();
+    // 1. Try Security Definer RPC for request details
+    const { data: detailRpc, error: rpcErr } = await supabase.rpc("get_blood_request_detail", {
+      _request_id: requestId,
+    });
 
-    if (error || !reqData) {
-      // Try fallback fetch via open requests RPC
-      const { data: rpcData } = await supabase.rpc("get_open_blood_requests");
-      const found = ((rpcData as Partial<BloodRequest>[] | null) || []).find(
-        (r) => r.id === requestId,
-      );
-
-      if (!found) {
-        setLoading(false);
-        return toast.error("Request not found");
-      }
-
+    if (detailRpc && detailRpc.length > 0) {
+      const found = detailRpc[0];
       const req: BloodRequest = {
-        id: found.id!,
+        id: found.id,
         user_id: found.user_id || "",
         patient_name: found.patient_name || "Emergency Patient",
         blood_group: found.blood_group || "O+",
@@ -200,9 +188,47 @@ export default function RequestDetail() {
       setRequest(req);
       runMatching(req);
     } else {
-      const req = reqData as BloodRequest;
-      setRequest(req);
-      runMatching(req);
+      // 2. Fallback direct table query
+      const { data: reqData, error } = await supabase
+        .from("blood_requests")
+        .select("*")
+        .eq("id", requestId)
+        .maybeSingle();
+
+      if (reqData) {
+        const req = reqData as BloodRequest;
+        setRequest(req);
+        runMatching(req);
+      } else {
+        // 3. Fallback open requests RPC
+        const { data: rpcData } = await supabase.rpc("get_open_blood_requests");
+        const found = ((rpcData as Partial<BloodRequest>[] | null) || []).find(
+          (r) => r.id === requestId,
+        );
+
+        if (!found) {
+          setLoading(false);
+          return toast.error("Request not found");
+        }
+
+        const req: BloodRequest = {
+          id: found.id!,
+          user_id: (found as any).user_id || "",
+          patient_name: (found as any).patient_name || "Emergency Patient",
+          blood_group: found.blood_group || "O+",
+          units_needed: found.units_needed || 1,
+          urgency: (found.urgency as any) || "normal",
+          status: (found.status as any) || "open",
+          latitude: found.latitude || 0,
+          longitude: found.longitude || 0,
+          needed_by: found.needed_by || null,
+          reason: (found as any).reason || null,
+          notes: (found as any).notes || null,
+          created_at: found.created_at || new Date().toISOString(),
+        };
+        setRequest(req);
+        runMatching(req);
+      }
     }
 
     // 2. Fetch past invites/responses for this request

@@ -78,6 +78,18 @@ export default function RequestDetail() {
   }, [id]);
 
   async function fetchAcceptedDonors(requestId: string) {
+    // 1. Try Security Definer RPC
+    const { data: rpcData, error: rpcError } = await supabase.rpc(
+      "get_accepted_donors_for_request",
+      { p_request_id: requestId },
+    );
+
+    if (rpcData && rpcData.length > 0) {
+      setAcceptedDonors(rpcData as any);
+      return;
+    }
+
+    // 2. Fallback table query
     const { data, error } = await supabase
       .from("request_responses")
       .select(

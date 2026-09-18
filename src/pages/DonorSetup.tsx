@@ -65,7 +65,9 @@ export default function DonorSetup() {
 
         // Reverse lookup address
         try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+          );
           const data = await res.json();
           if (data?.display_name && !address) {
             setAddress(data.display_name);
@@ -106,7 +108,8 @@ export default function DonorSetup() {
       u.user.email?.split("@")[0] ||
       "Donor";
 
-    const userPhone = whatsapp.trim() || profile?.phone || (u.user.user_metadata?.phone as string) || "";
+    const userPhone =
+      whatsapp.trim() || profile?.phone || (u.user.user_metadata?.phone as string) || "";
 
     // 1. Guarantee profile row exists with user_type set to 'donor' via UPSERT
     const { error: profileErr } = await supabase.from("profiles").upsert(
@@ -118,7 +121,7 @@ export default function DonorSetup() {
         user_type: "donor",
         address: address.trim() || profile?.address || null,
       },
-      { onConflict: "id" }
+      { onConflict: "id" },
     );
 
     if (profileErr) {
@@ -157,7 +160,9 @@ export default function DonorSetup() {
 
       <main className="max-w-2xl mx-auto px-4 py-8 flex-1 w-full">
         <h1 className="text-2xl sm:text-4xl font-bold">Donor registration</h1>
-        <p className="text-muted-foreground text-sm mt-1">Tell us how and when people can reach you.</p>
+        <p className="text-muted-foreground text-sm mt-1">
+          Tell us how and when people can reach you.
+        </p>
 
         <form onSubmit={onSubmit} className="glass-card rounded-2xl p-6 md:p-8 mt-6 space-y-6">
           <div className="grid md:grid-cols-2 gap-4">

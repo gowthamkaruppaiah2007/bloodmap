@@ -35,11 +35,11 @@ export default function Navbar() {
 
         setAvatarUrl(
           p?.avatar_url ??
-          (data.user.user_metadata?.avatar_url as string) ??
-          (data.user.user_metadata?.picture as string) ??
-          null
+            (data.user.user_metadata?.avatar_url as string) ??
+            (data.user.user_metadata?.picture as string) ??
+            null,
         );
-        
+
         const { data: d } = await supabase
           .from("donors")
           .select("id")
@@ -71,7 +71,10 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 glass-card border-x-0 border-t-0 rounded-none shadow-sm">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         {/* Brand logo & title */}
-        <Link to="/home" className="flex items-center gap-2 font-extrabold text-primary hover:opacity-90 transition">
+        <Link
+          to="/home"
+          className="flex items-center gap-2 font-extrabold text-primary hover:opacity-90 transition"
+        >
           <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shadow-glow">
             <Droplet className="w-5 h-5 fill-primary text-primary" />
           </div>
@@ -136,7 +139,12 @@ export default function Navbar() {
           )}
 
           {userEmail && profileType !== "donor" && (
-            <Button asChild variant="outline" size="sm" className="border-primary/40 text-primary font-semibold">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="border-primary/40 text-primary font-semibold"
+            >
               <Link to="/donor-setup">
                 <Heart className="w-4 h-4 mr-1.5 text-red-500 fill-red-500" /> Become a Donor
               </Link>
@@ -144,7 +152,12 @@ export default function Navbar() {
           )}
 
           {userEmail ? (
-            <Button onClick={handleLogout} variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+            <Button
+              onClick={handleLogout}
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
+            >
               <LogOut className="w-4 h-4 mr-1.5" /> Sign out
             </Button>
           ) : (
@@ -184,7 +197,9 @@ export default function Navbar() {
             <Link
               to="/requests"
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-base transition ${
-                isActive("/requests") ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted"
+                isActive("/requests")
+                  ? "bg-primary/10 text-primary font-semibold"
+                  : "hover:bg-muted"
               }`}
             >
               <FileText className="w-5 h-5 text-primary" /> Blood Requests
@@ -193,7 +208,9 @@ export default function Navbar() {
             <Link
               to="/forecast"
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-base transition ${
-                isActive("/forecast") ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted"
+                isActive("/forecast")
+                  ? "bg-primary/10 text-primary font-semibold"
+                  : "hover:bg-muted"
               }`}
             >
               <TrendingUp className="w-5 h-5 text-primary" /> Forecast AI
@@ -203,7 +220,9 @@ export default function Navbar() {
               <Link
                 to="/profile"
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-base transition ${
-                  isActive("/profile") ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted"
+                  isActive("/profile")
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "hover:bg-muted"
                 }`}
               >
                 {avatarUrl ? (
@@ -238,7 +257,11 @@ export default function Navbar() {
             )}
 
             {userEmail ? (
-              <Button onClick={handleLogout} variant="outline" className="w-full justify-center text-destructive">
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                className="w-full justify-center text-destructive"
+              >
                 <LogOut className="w-4 h-4 mr-2" /> Sign out
               </Button>
             ) : (

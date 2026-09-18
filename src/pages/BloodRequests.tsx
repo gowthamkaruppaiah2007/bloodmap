@@ -103,7 +103,7 @@ export default function BloodRequests() {
 
     const reqMap = new Map<string, BloodRequest>();
 
-    (openRpcData as Partial<BloodRequest>[] | null || []).forEach((r) => {
+    ((openRpcData as Partial<BloodRequest>[] | null) || []).forEach((r) => {
       if (r.id) {
         reqMap.set(r.id, {
           id: r.id,
@@ -123,12 +123,12 @@ export default function BloodRequests() {
       }
     });
 
-    (ownData as BloodRequest[] | null || []).forEach((r) => {
+    ((ownData as BloodRequest[] | null) || []).forEach((r) => {
       reqMap.set(r.id, r);
     });
 
     const merged = Array.from(reqMap.values()).sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
 
     setRequests(merged);
@@ -160,7 +160,8 @@ export default function BloodRequests() {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return setSubmitting(false);
 
-    const parsedUnits = typeof units === "number" ? units : Math.max(1, parseInt(units as string) || 1);
+    const parsedUnits =
+      typeof units === "number" ? units : Math.max(1, parseInt(units as string) || 1);
 
     const { data, error } = await supabase
       .from("blood_requests")
@@ -182,7 +183,18 @@ export default function BloodRequests() {
     setSubmitting(false);
     if (error) return toast.error(error.message);
 
-    toast.success("Blood request created! Finding matches…");
+    // Dispatch FCM web push notifications to matching donors via Supabase Edge Function
+    supabase.functions
+      .invoke("send-push-notification", {
+        body: { request_id: data.id },
+      })
+      .then(({ error: fnErr }) => {
+        if (fnErr) console.warn("Push notification function warning:", fnErr);
+        else console.log("Push notifications dispatched to matching donors.");
+      })
+      .catch((err) => console.error("Failed to invoke push notification function:", err));
+
+    toast.success("Blood request created! Notifying nearby donors…");
     setOpenModal(false);
     navigate(`/requests/${data.id}`);
   }
@@ -218,7 +230,7 @@ export default function BloodRequests() {
   const matchingCount = useMemo(() => {
     if (!donorProfile) return 0;
     return requests.filter(
-      (r) => r.status === "open" && isBloodCompatible(donorProfile.blood_group, r.blood_group)
+      (r) => r.status === "open" && isBloodCompatible(donorProfile.blood_group, r.blood_group),
     ).length;
   }, [requests, donorProfile]);
 
@@ -237,10 +249,13 @@ export default function BloodRequests() {
               </div>
               <div>
                 <h3 className="font-bold text-foreground text-base">
-                  You match {matchingCount} urgent blood {matchingCount === 1 ? "request" : "requests"}!
+                  You match {matchingCount} urgent blood{" "}
+                  {matchingCount === 1 ? "request" : "requests"}!
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Your blood group <span className="font-bold text-foreground">{donorProfile.blood_group}</span> can save lives. View requests you can donate to below.
+                  Your blood group{" "}
+                  <span className="font-bold text-foreground">{donorProfile.blood_group}</span> can
+                  save lives. View requests you can donate to below.
                 </p>
               </div>
             </div>
@@ -617,7 +632,11 @@ function RequestCard({
           </Button>
 
           {isCompatibleDonor && donorProfile && (
-            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-glow">
+            <Button
+              asChild
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-glow"
+            >
               <a
                 href={buildWhatsAppUrl(donorProfile.whatsapp_number, donateMsg)}
                 target="_blank"

@@ -43,7 +43,7 @@ export default function UserProfile() {
   const [userId, setUserId] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [createdAt, setCreatedAt] = useState<string>("");
-  
+
   // Profile form state
   const [fullName, setFullName] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
@@ -81,35 +81,38 @@ export default function UserProfile() {
     const u = authRes.user;
     setUserId(u.id);
     setEmail(u.email ?? "");
-    setCreatedAt(u.created_at ? new Date(u.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "");
+    setCreatedAt(
+      u.created_at
+        ? new Date(u.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+        : "",
+    );
 
     // 1. Fetch Profile Data
-    const { data: p } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", u.id)
-      .maybeSingle();
+    const { data: p } = await supabase.from("profiles").select("*").eq("id", u.id).maybeSingle();
 
     if (p) {
       setFullName(p.full_name ?? (u.user_metadata?.full_name as string) ?? "");
       setPhone(p.phone ?? (u.user_metadata?.phone as string) ?? "");
       setAddress((p.address as string) ?? (u.user_metadata?.address as string) ?? "");
-      setAvatarUrl(p.avatar_url ?? (u.user_metadata?.avatar_url as string) ?? (u.user_metadata?.picture as string) ?? null);
+      setAvatarUrl(
+        p.avatar_url ??
+          (u.user_metadata?.avatar_url as string) ??
+          (u.user_metadata?.picture as string) ??
+          null,
+      );
       if (p.user_type === "donor" || p.user_type === "seeker") {
         setUserType(p.user_type);
       }
     } else {
       setFullName((u.user_metadata?.full_name as string) ?? "");
       setPhone((u.user_metadata?.phone as string) ?? "");
-      setAvatarUrl((u.user_metadata?.avatar_url as string) ?? (u.user_metadata?.picture as string) ?? null);
+      setAvatarUrl(
+        (u.user_metadata?.avatar_url as string) ?? (u.user_metadata?.picture as string) ?? null,
+      );
     }
 
     // 2. Fetch Donor record if present
-    const { data: d } = await supabase
-      .from("donors")
-      .select("*")
-      .eq("user_id", u.id)
-      .maybeSingle();
+    const { data: d } = await supabase.from("donors").select("*").eq("user_id", u.id).maybeSingle();
 
     if (d) {
       setDonorId(d.id);
@@ -144,7 +147,7 @@ export default function UserProfile() {
         try {
           // Free Nominatim OpenStreetMap reverse geocoding
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
           );
           const data = await res.json();
           if (data && data.display_name) {
@@ -162,7 +165,7 @@ export default function UserProfile() {
       (err) => {
         setLocating(false);
         toast.error("Could not retrieve current location: " + err.message);
-      }
+      },
     );
   }
 
@@ -223,10 +226,7 @@ export default function UserProfile() {
           donorData.avatar_url = avatarUrl;
         }
 
-        let { error: dErr } = await supabase
-          .from("donors")
-          .update(donorData)
-          .eq("id", donorId);
+        let { error: dErr } = await supabase.from("donors").update(donorData).eq("id", donorId);
 
         if (dErr && dErr.message.includes("avatar_url")) {
           delete donorData.avatar_url;
@@ -320,15 +320,14 @@ export default function UserProfile() {
   async function toggleDonorAvailability(val: boolean) {
     setIsAvailable(val);
     if (!donorId) return;
-    const { error } = await supabase
-      .from("donors")
-      .update({ is_available: val })
-      .eq("id", donorId);
+    const { error } = await supabase.from("donors").update({ is_available: val }).eq("id", donorId);
     if (error) {
       toast.error("Could not update availability: " + error.message);
       setIsAvailable(!val);
     } else {
-      toast.success(val ? "You are now marked as AVAILABLE for donations!" : "You are marked as UNAVAILABLE.");
+      toast.success(
+        val ? "You are now marked as AVAILABLE for donations!" : "You are marked as UNAVAILABLE.",
+      );
     }
   }
 
@@ -478,11 +477,17 @@ export default function UserProfile() {
               {/* Status Badge */}
               <div className="flex items-center justify-center sm:justify-end shrink-0">
                 {donorId ? (
-                  <Badge variant="default" className="bg-gradient-to-r from-red-600 to-rose-500 text-white px-4 py-2 text-sm font-extrabold flex items-center gap-2 shadow-glow rounded-xl">
+                  <Badge
+                    variant="default"
+                    className="bg-gradient-to-r from-red-600 to-rose-500 text-white px-4 py-2 text-sm font-extrabold flex items-center gap-2 shadow-glow rounded-xl"
+                  >
                     <Droplet className="w-4.5 h-4.5 fill-white text-white" /> Donor ({bloodGroup})
                   </Badge>
                 ) : (
-                  <Badge variant="secondary" className="px-4 py-2 text-sm font-bold flex items-center gap-2 rounded-xl border border-border">
+                  <Badge
+                    variant="secondary"
+                    className="px-4 py-2 text-sm font-bold flex items-center gap-2 rounded-xl border border-border"
+                  >
                     <Heart className="w-4.5 h-4.5 text-primary fill-primary/20" /> Seeker Account
                   </Badge>
                 )}
@@ -496,8 +501,12 @@ export default function UserProfile() {
                   <FileText className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground font-semibold block">My Blood Requests</span>
-                  <span className="text-base font-bold text-foreground">{myRequestsCount} Request(s)</span>
+                  <span className="text-xs text-muted-foreground font-semibold block">
+                    My Blood Requests
+                  </span>
+                  <span className="text-base font-bold text-foreground">
+                    {myRequestsCount} Request(s)
+                  </span>
                 </div>
               </div>
 
@@ -506,7 +515,9 @@ export default function UserProfile() {
                   <Droplet className="w-5 h-5 text-rose-500 fill-rose-500" />
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground font-semibold block">Donor Status</span>
+                  <span className="text-xs text-muted-foreground font-semibold block">
+                    Donor Status
+                  </span>
                   <span className="text-base font-bold text-foreground">
                     {donorId ? (isAvailable ? "Available 🟢" : "Busy 🔴") : "Not Registered"}
                   </span>
@@ -518,8 +529,12 @@ export default function UserProfile() {
                   <Phone className="w-5 h-5 text-primary" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="text-xs text-muted-foreground font-semibold block">Contact Phone</span>
-                  <span className="text-base font-bold text-foreground truncate block">{phone || "Not set"}</span>
+                  <span className="text-xs text-muted-foreground font-semibold block">
+                    Contact Phone
+                  </span>
+                  <span className="text-base font-bold text-foreground truncate block">
+                    {phone || "Not set"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -536,7 +551,8 @@ export default function UserProfile() {
               </div>
               <h2 className="text-2xl font-extrabold tracking-tight">Become a Registered Donor</h2>
               <p className="text-sm text-white/90 max-w-xl">
-                You are currently registered as a Blood Seeker. Registering as a donor allows people in critical emergency need nearby to find your blood group when seconds count.
+                You are currently registered as a Blood Seeker. Registering as a donor allows people
+                in critical emergency need nearby to find your blood group when seconds count.
               </p>
             </div>
             <Button
@@ -564,7 +580,9 @@ export default function UserProfile() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold">My Address Details</h2>
-                  <p className="text-xs text-muted-foreground">Add and manage your residential or emergency address</p>
+                  <p className="text-xs text-muted-foreground">
+                    Add and manage your residential or emergency address
+                  </p>
                 </div>
               </div>
               <Button
@@ -575,13 +593,19 @@ export default function UserProfile() {
                 disabled={locating}
                 className="text-xs font-semibold rounded-xl self-start sm:self-auto"
               >
-                {locating ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Compass className="w-3.5 h-3.5 mr-1.5 text-primary" />}
+                {locating ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                ) : (
+                  <Compass className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                )}
                 Auto-Detect Location
               </Button>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="user-address" className="font-semibold text-sm">Full Address</Label>
+              <Label htmlFor="user-address" className="font-semibold text-sm">
+                Full Address
+              </Label>
               <Textarea
                 id="user-address"
                 rows={3}
@@ -605,13 +629,17 @@ export default function UserProfile() {
               </div>
               <div>
                 <h2 className="text-lg font-bold">Personal Information</h2>
-                <p className="text-xs text-muted-foreground">Update your personal contact details</p>
+                <p className="text-xs text-muted-foreground">
+                  Update your personal contact details
+                </p>
               </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-5">
               <div className="space-y-2">
-                <Label htmlFor="user-fullname" className="font-semibold text-sm">Full Name</Label>
+                <Label htmlFor="user-fullname" className="font-semibold text-sm">
+                  Full Name
+                </Label>
                 <Input
                   id="user-fullname"
                   required
@@ -623,7 +651,9 @@ export default function UserProfile() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="user-email" className="font-semibold text-sm">Email Address (Account)</Label>
+                <Label htmlFor="user-email" className="font-semibold text-sm">
+                  Email Address (Account)
+                </Label>
                 <Input
                   id="user-email"
                   type="email"
@@ -634,7 +664,9 @@ export default function UserProfile() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="user-phone" className="font-semibold text-sm">Phone / WhatsApp Number</Label>
+                <Label htmlFor="user-phone" className="font-semibold text-sm">
+                  Phone / WhatsApp Number
+                </Label>
                 <Input
                   id="user-phone"
                   type="tel"
@@ -647,13 +679,22 @@ export default function UserProfile() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="user-role" className="font-semibold text-sm">Account Role</Label>
+                <Label htmlFor="user-role" className="font-semibold text-sm">
+                  Account Role
+                </Label>
                 <div className="flex flex-wrap items-center gap-3 pt-1">
-                  <Badge variant={donorId ? "default" : "secondary"} className="px-3.5 py-2 text-xs font-bold rounded-xl">
+                  <Badge
+                    variant={donorId ? "default" : "secondary"}
+                    className="px-3.5 py-2 text-xs font-bold rounded-xl"
+                  >
                     {donorId ? "Registered Donor" : "Blood Seeker (Non-Donor)"}
                   </Badge>
                   {!donorId && (
-                    <Button asChild size="sm" className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-glow">
+                    <Button
+                      asChild
+                      size="sm"
+                      className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-glow"
+                    >
                       <Link to="/donor-setup" className="flex items-center gap-1.5">
                         <Heart className="w-4 h-4 fill-white" /> Register as a Donor
                       </Link>
@@ -674,22 +715,25 @@ export default function UserProfile() {
                   </div>
                   <div>
                     <h2 className="text-lg font-bold">Donor & Availability Settings</h2>
-                    <p className="text-xs text-muted-foreground">Manage your donor card details and availability status</p>
+                    <p className="text-xs text-muted-foreground">
+                      Manage your donor card details and availability status
+                    </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3 bg-muted/50 px-3.5 py-1.5 rounded-2xl border border-border">
-                  <span className="text-xs font-bold">{isAvailable ? "Available 🟢" : "Busy 🔴"}</span>
-                  <Switch
-                    checked={isAvailable}
-                    onCheckedChange={toggleDonorAvailability}
-                  />
+                  <span className="text-xs font-bold">
+                    {isAvailable ? "Available 🟢" : "Busy 🔴"}
+                  </span>
+                  <Switch checked={isAvailable} onCheckedChange={toggleDonorAvailability} />
                 </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <Label htmlFor="donor-bloodgroup" className="font-semibold text-sm">Blood Group</Label>
+                  <Label htmlFor="donor-bloodgroup" className="font-semibold text-sm">
+                    Blood Group
+                  </Label>
                   <select
                     id="donor-bloodgroup"
                     value={bloodGroup}
@@ -705,7 +749,9 @@ export default function UserProfile() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="donor-emergency" className="font-semibold text-sm">Emergency Contact Number</Label>
+                  <Label htmlFor="donor-emergency" className="font-semibold text-sm">
+                    Emergency Contact Number
+                  </Label>
                   <Input
                     id="donor-emergency"
                     type="tel"
@@ -717,7 +763,9 @@ export default function UserProfile() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="start-time" className="font-semibold text-sm">Available From (Time)</Label>
+                  <Label htmlFor="start-time" className="font-semibold text-sm">
+                    Available From (Time)
+                  </Label>
                   <Input
                     id="start-time"
                     type="time"
@@ -728,7 +776,9 @@ export default function UserProfile() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="end-time" className="font-semibold text-sm">Available Until (Time)</Label>
+                  <Label htmlFor="end-time" className="font-semibold text-sm">
+                    Available Until (Time)
+                  </Label>
                   <Input
                     id="end-time"
                     type="time"
@@ -741,10 +791,16 @@ export default function UserProfile() {
 
               {availableDays.length > 0 && (
                 <div className="pt-2">
-                  <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Active Donation Days</Label>
+                  <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block">
+                    Active Donation Days
+                  </Label>
                   <div className="flex flex-wrap gap-1.5">
                     {availableDays.map((day) => (
-                      <Badge key={day} variant="secondary" className="text-xs rounded-lg px-2.5 py-1 font-medium">
+                      <Badge
+                        key={day}
+                        variant="secondary"
+                        className="text-xs rounded-lg px-2.5 py-1 font-medium"
+                      >
                         {day}
                       </Badge>
                     ))}
@@ -760,8 +816,17 @@ export default function UserProfile() {
               <Link to="/home">Back to Home</Link>
             </Button>
 
-            <Button type="submit" disabled={saving} size="lg" className="shadow-glow px-8 rounded-xl h-11 font-bold">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+            <Button
+              type="submit"
+              disabled={saving}
+              size="lg"
+              className="shadow-glow px-8 rounded-xl h-11 font-bold"
+            >
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
               Save Profile & Address
             </Button>
           </div>

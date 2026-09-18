@@ -70,7 +70,8 @@ export default function DemandForecast() {
   function handleEvaluateEligibility(e: React.FormEvent) {
     e.preventDefault();
     const ageVal = typeof testAge === "number" ? testAge : parseFloat(testAge as string) || 0;
-    const weightVal = typeof testWeight === "number" ? testWeight : parseFloat(testWeight as string) || 0;
+    const weightVal =
+      typeof testWeight === "number" ? testWeight : parseFloat(testWeight as string) || 0;
     const hgbVal = typeof testHgb === "number" ? testHgb : parseFloat(testHgb as string) || 0;
 
     const reasons: string[] = [];
@@ -201,7 +202,8 @@ export default function DemandForecast() {
         <section className="glass-card rounded-3xl p-4 sm:p-8 space-y-4 shadow-lg border border-border">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" /> Projected Request Volume ({horizon} Days)
+              <TrendingUp className="w-5 h-5 text-primary" /> Projected Request Volume ({horizon}{" "}
+              Days)
             </h2>
             <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full w-fit">
               Confidence Interval: 90%
@@ -275,9 +277,14 @@ export default function DemandForecast() {
             </div>
           </div>
 
-          <form onSubmit={handleEvaluateEligibility} className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+          <form
+            onSubmit={handleEvaluateEligibility}
+            className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2"
+          >
             <div className="space-y-1.5">
-              <Label htmlFor="t-age" className="font-semibold text-xs">Age (Years)</Label>
+              <Label htmlFor="t-age" className="font-semibold text-xs">
+                Age (Years)
+              </Label>
               <Input
                 id="t-age"
                 type="number"
@@ -288,7 +295,9 @@ export default function DemandForecast() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="t-weight" className="font-semibold text-xs">Weight (kg)</Label>
+              <Label htmlFor="t-weight" className="font-semibold text-xs">
+                Weight (kg)
+              </Label>
               <Input
                 id="t-weight"
                 type="number"
@@ -299,7 +308,9 @@ export default function DemandForecast() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="t-hgb" className="font-semibold text-xs">Hemoglobin (g/dL)</Label>
+              <Label htmlFor="t-hgb" className="font-semibold text-xs">
+                Hemoglobin (g/dL)
+              </Label>
               <Input
                 id="t-hgb"
                 type="number"
@@ -311,7 +322,9 @@ export default function DemandForecast() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="t-bg" className="font-semibold text-xs">Blood Group</Label>
+              <Label htmlFor="t-bg" className="font-semibold text-xs">
+                Blood Group
+              </Label>
               <select
                 id="t-bg"
                 value={testBg}
@@ -319,7 +332,9 @@ export default function DemandForecast() {
                 className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary"
               >
                 {BLOOD_GROUPS.map((bg) => (
-                  <option key={bg} value={bg}>{bg}</option>
+                  <option key={bg} value={bg}>
+                    {bg}
+                  </option>
                 ))}
               </select>
             </div>
@@ -332,7 +347,9 @@ export default function DemandForecast() {
           </form>
 
           {evalResult && (
-            <div className={`mt-4 p-4 rounded-2xl border ${evalResult.status === "Eligible" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-200" : "bg-rose-500/10 border-rose-500/30 text-rose-950 dark:text-rose-200"}`}>
+            <div
+              className={`mt-4 p-4 rounded-2xl border ${evalResult.status === "Eligible" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-200" : "bg-rose-500/10 border-rose-500/30 text-rose-950 dark:text-rose-200"}`}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 font-bold text-lg">
                   {evalResult.status === "Eligible" ? (
@@ -358,7 +375,9 @@ export default function DemandForecast() {
 
         {/* Daily Forecast Breakdown Table */}
         <section className="glass-card rounded-3xl p-4 sm:p-6 border border-border shadow-lg">
-          <h3 className="font-bold text-base sm:text-lg mb-4">Daily Time-Series Forecast Breakdown</h3>
+          <h3 className="font-bold text-base sm:text-lg mb-4">
+            Daily Time-Series Forecast Breakdown
+          </h3>
           {loading || !forecastData ? (
             <div className="py-8 grid place-items-center">
               <Loader2 className="w-5 h-5 animate-spin" />

@@ -287,10 +287,10 @@ export async function forecastDemand(params: {
     // Time-series forecast curve incorporating actual database requests
     const trendMultiplier = isWeekend ? 1.2 : 0.95;
     const seasonalFactor = Math.sin(i * 0.5) * 0.3 + 1.0;
-    
+
     const predicted = Math.max(
       actualForDate,
-      Math.round((baseRate * 0.3 + actualForDate) * trendMultiplier * seasonalFactor)
+      Math.round((baseRate * 0.3 + actualForDate) * trendMultiplier * seasonalFactor),
     );
 
     const lower = Math.max(0, Math.round(predicted * 0.7));

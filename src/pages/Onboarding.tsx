@@ -40,7 +40,7 @@ export default function Onboarding() {
         phone: profile?.phone ?? (u.user.user_metadata?.phone as string) ?? "",
         user_type: type,
       },
-      { onConflict: "id" }
+      { onConflict: "id" },
     );
 
     setLoading(null);

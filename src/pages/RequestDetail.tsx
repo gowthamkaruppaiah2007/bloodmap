@@ -59,7 +59,9 @@ export default function RequestDetail() {
     if (error || !reqData) {
       // Try fallback fetch via open requests RPC
       const { data: rpcData } = await supabase.rpc("get_open_blood_requests");
-      const found = (rpcData as Partial<BloodRequest>[] | null || []).find((r) => r.id === requestId);
+      const found = ((rpcData as Partial<BloodRequest>[] | null) || []).find(
+        (r) => r.id === requestId,
+      );
 
       if (!found) {
         setLoading(false);
@@ -199,7 +201,8 @@ export default function RequestDetail() {
                   You are a Compatible Donor Match!
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Your blood group ({donorProfile.blood_group}) can be donated for this request ({request.blood_group}).
+                  Your blood group ({donorProfile.blood_group}) can be donated for this request (
+                  {request.blood_group}).
                 </p>
               </div>
             </div>
@@ -317,7 +320,9 @@ export default function RequestDetail() {
           {matchingLoading ? (
             <div className="glass-card rounded-2xl p-12 text-center text-muted-foreground flex flex-col items-center justify-center space-y-3">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p className="text-sm">Analyzing compatibility matrix, distance decay, and response probabilities…</p>
+              <p className="text-sm">
+                Analyzing compatibility matrix, distance decay, and response probabilities…
+              </p>
             </div>
           ) : rankedDonors.length === 0 ? (
             <div className="glass-card rounded-2xl p-10 text-center text-muted-foreground space-y-2">

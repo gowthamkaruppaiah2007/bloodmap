@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom
 import { Toaster } from "sonner";
 import { Loader2 } from "lucide-react";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { useNotifications } from "@/hooks/useNotifications";
 
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
@@ -52,40 +53,46 @@ function RootRedirect() {
   return <Navigate to={session ? "/home" : "/auth"} replace />;
 }
 
-export default function App() {
+function AppContent() {
+  useNotifications();
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<RootRedirect />} />
-          <Route
-            path="/auth"
-            element={
-              <PublicOnlyRoute>
-                <AuthPage />
-              </PublicOnlyRoute>
-            }
-          />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<RootRedirect />} />
+        <Route
+          path="/auth"
+          element={
+            <PublicOnlyRoute>
+              <AuthPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-          {/* Protected routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/home" element={<Home />} />
-            <Route path="/profile" element={<UserProfile />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/donor-setup" element={<DonorSetup />} />
-            <Route path="/donors/:id" element={<DonorProfile />} />
-            <Route path="/requests" element={<BloodRequests />} />
-            <Route path="/requests/:id" element={<RequestDetail />} />
-            <Route path="/forecast" element={<DemandForecast />} />
-          </Route>
+        {/* Protected routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/home" element={<Home />} />
+          <Route path="/profile" element={<UserProfile />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/donor-setup" element={<DonorSetup />} />
+          <Route path="/donors/:id" element={<DonorProfile />} />
+          <Route path="/requests" element={<BloodRequests />} />
+          <Route path="/requests/:id" element={<RequestDetail />} />
+          <Route path="/forecast" element={<DemandForecast />} />
+        </Route>
 
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-        <Toaster position="top-center" richColors closeButton />
-      </BrowserRouter>
-    </AuthProvider>
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+      <Toaster position="top-center" richColors closeButton />
+    </BrowserRouter>
   );
 }
 
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}

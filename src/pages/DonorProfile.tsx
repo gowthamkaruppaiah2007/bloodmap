@@ -235,8 +235,11 @@ export default function DonorProfile() {
             {routeInfo && (
               <div className="mt-3 text-xs sm:text-sm text-muted-foreground text-center">
                 Route:{" "}
-                <span className="font-semibold text-foreground">{routeInfo.km.toFixed(1)} km</span> ·{" "}
-                <span className="font-semibold text-foreground">{Math.round(routeInfo.min)} min</span>{" "}
+                <span className="font-semibold text-foreground">{routeInfo.km.toFixed(1)} km</span>{" "}
+                ·{" "}
+                <span className="font-semibold text-foreground">
+                  {Math.round(routeInfo.min)} min
+                </span>{" "}
                 by car
               </div>
             )}
@@ -266,7 +269,9 @@ function Row({ icon, label, value }: { icon: React.ReactNode; label: string; val
         {icon}
       </div>
       <div className="min-w-0">
-        <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{label}</div>
+        <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+          {label}
+        </div>
         <div className="font-medium text-sm break-words mt-0.5">{value}</div>
       </div>
     </div>

@@ -72,7 +72,7 @@ export default function Home() {
         const { data: openReqs } = await supabase.rpc("get_open_blood_requests");
         if (openReqs) {
           const compatible = (openReqs as Partial<BloodRequest>[]).filter(
-            (r) => r.blood_group && isBloodCompatible(d.blood_group, r.blood_group)
+            (r) => r.blood_group && isBloodCompatible(d.blood_group, r.blood_group),
           ) as BloodRequest[];
           setMatchingRequests(compatible);
         }
@@ -167,7 +167,9 @@ export default function Home() {
               </div>
               <div>
                 <h2 className="font-extrabold text-foreground text-base sm:text-lg">
-                  {matchingRequests.length} Urgent Blood {matchingRequests.length === 1 ? "Request" : "Requests"} Match Your Blood Group ({donorProfile.blood_group})!
+                  {matchingRequests.length} Urgent Blood{" "}
+                  {matchingRequests.length === 1 ? "Request" : "Requests"} Match Your Blood Group (
+                  {donorProfile.blood_group})!
                 </h2>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                   Patients are currently seeking blood donations that you can fulfill.
@@ -175,7 +177,11 @@ export default function Home() {
               </div>
             </div>
 
-            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-glow shrink-0 w-full sm:w-auto">
+            <Button
+              asChild
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-glow shrink-0 w-full sm:w-auto"
+            >
               <Link to="/requests">
                 View & Offer Donation <ArrowRight className="w-4 h-4 ml-1" />
               </Link>
@@ -288,7 +294,9 @@ function Stat({ label, value, icon }: { label: string; value: string; icon: Reac
         {icon}
       </div>
       <div>
-        <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{label}</div>
+        <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+          {label}
+        </div>
         <div className="text-base sm:text-lg font-bold mt-0.5 truncate">{value}</div>
       </div>
     </div>

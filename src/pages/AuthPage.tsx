@@ -176,7 +176,9 @@ function LoginForm() {
     setForgotLoading(false);
     if (error) {
       if (/rate limit/i.test(error.message)) {
-        return toast.error("Email rate limit exceeded. Please wait a few minutes or configure Custom SMTP in Supabase.");
+        return toast.error(
+          "Email rate limit exceeded. Please wait a few minutes or configure Custom SMTP in Supabase.",
+        );
       }
       return toast.error(error.message);
     }
@@ -332,11 +334,14 @@ function LoginForm() {
                 <div>
                   <h3 className="text-lg font-semibold">Enter Verification Code</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    We sent a 6-digit OTP to <span className="font-medium text-foreground">{forgotEmail}</span>.
+                    We sent a 6-digit OTP to{" "}
+                    <span className="font-medium text-foreground">{forgotEmail}</span>.
                   </p>
                 </div>
                 <div className="space-y-3 flex flex-col items-center">
-                  <Label htmlFor="fp-otp" className="w-full text-left">6-Digit OTP Code</Label>
+                  <Label htmlFor="fp-otp" className="w-full text-left">
+                    6-Digit OTP Code
+                  </Label>
                   <InputOTP
                     id="fp-otp"
                     maxLength={6}
@@ -345,15 +350,33 @@ function LoginForm() {
                     containerClassName="justify-center py-2"
                   >
                     <InputOTPGroup>
-                      <InputOTPSlot index={0} className="w-10 h-12 text-lg font-bold text-primary" />
-                      <InputOTPSlot index={1} className="w-10 h-12 text-lg font-bold text-primary" />
-                      <InputOTPSlot index={2} className="w-10 h-12 text-lg font-bold text-primary" />
+                      <InputOTPSlot
+                        index={0}
+                        className="w-10 h-12 text-lg font-bold text-primary"
+                      />
+                      <InputOTPSlot
+                        index={1}
+                        className="w-10 h-12 text-lg font-bold text-primary"
+                      />
+                      <InputOTPSlot
+                        index={2}
+                        className="w-10 h-12 text-lg font-bold text-primary"
+                      />
                     </InputOTPGroup>
                     <InputOTPSeparator />
                     <InputOTPGroup>
-                      <InputOTPSlot index={3} className="w-10 h-12 text-lg font-bold text-primary" />
-                      <InputOTPSlot index={4} className="w-10 h-12 text-lg font-bold text-primary" />
-                      <InputOTPSlot index={5} className="w-10 h-12 text-lg font-bold text-primary" />
+                      <InputOTPSlot
+                        index={3}
+                        className="w-10 h-12 text-lg font-bold text-primary"
+                      />
+                      <InputOTPSlot
+                        index={4}
+                        className="w-10 h-12 text-lg font-bold text-primary"
+                      />
+                      <InputOTPSlot
+                        index={5}
+                        className="w-10 h-12 text-lg font-bold text-primary"
+                      />
                     </InputOTPGroup>
                   </InputOTP>
                 </div>
@@ -576,7 +599,7 @@ function GoogleAuthButton() {
         if (/provider is not enabled/i.test(error.message)) {
           toast.error(
             "Google Login is disabled in Supabase. Please enable the Google provider in your Supabase Dashboard under Authentication -> Providers.",
-            { duration: 8000 }
+            { duration: 8000 },
           );
         } else {
           toast.error(error.message);
@@ -636,4 +659,3 @@ function GoogleAuthButton() {
     </div>
   );
 }
-

@@ -62,12 +62,16 @@ export default function ResetPasswordPage() {
     setLoading(false);
     if (error) {
       if (/rate limit/i.test(error.message)) {
-        return toast.error("Email rate limit exceeded. Please wait a few minutes or check Custom SMTP in Supabase.");
+        return toast.error(
+          "Email rate limit exceeded. Please wait a few minutes or check Custom SMTP in Supabase.",
+        );
       }
       return toast.error(error.message);
     }
 
-    toast.success("6-digit OTP code sent! Check your email inbox & Spam folder.", { duration: 6000 });
+    toast.success("6-digit OTP code sent! Check your email inbox & Spam folder.", {
+      duration: 6000,
+    });
     setStep("otp");
   }
 
@@ -141,9 +145,15 @@ export default function ResetPasswordPage() {
               </span>
             </div>
             <div className="flex gap-1">
-              <span className={`h-2 w-6 rounded-full transition-all ${step === "email" ? "bg-primary" : "bg-primary/30"}`} />
-              <span className={`h-2 w-6 rounded-full transition-all ${step === "otp" ? "bg-primary" : "bg-primary/30"}`} />
-              <span className={`h-2 w-6 rounded-full transition-all ${step === "password" ? "bg-primary" : "bg-primary/30"}`} />
+              <span
+                className={`h-2 w-6 rounded-full transition-all ${step === "email" ? "bg-primary" : "bg-primary/30"}`}
+              />
+              <span
+                className={`h-2 w-6 rounded-full transition-all ${step === "otp" ? "bg-primary" : "bg-primary/30"}`}
+              />
+              <span
+                className={`h-2 w-6 rounded-full transition-all ${step === "password" ? "bg-primary" : "bg-primary/30"}`}
+              />
             </div>
           </div>
 
@@ -157,7 +167,8 @@ export default function ResetPasswordPage() {
               <div>
                 <h1 className="text-2xl font-bold">Forgot Password?</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Enter your registered email address below to receive a 6-digit OTP verification code via email.
+                  Enter your registered email address below to receive a 6-digit OTP verification
+                  code via email.
                 </p>
               </div>
 
@@ -175,7 +186,12 @@ export default function ResetPasswordPage() {
               </div>
 
               <div className="pt-2 space-y-2">
-                <Button type="submit" disabled={loading || !email} className="w-full shadow-glow" size="lg">
+                <Button
+                  type="submit"
+                  disabled={loading || !email}
+                  className="w-full shadow-glow"
+                  size="lg"
+                >
                   {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                   Send OTP Code
                 </Button>
@@ -192,12 +208,16 @@ export default function ResetPasswordPage() {
               <div>
                 <h1 className="text-2xl font-bold">Enter Verification OTP</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  We sent a 6-digit OTP code to <span className="font-semibold text-foreground">{email}</span>. Please enter it below.
+                  We sent a 6-digit OTP code to{" "}
+                  <span className="font-semibold text-foreground">{email}</span>. Please enter it
+                  below.
                 </p>
               </div>
 
               <div className="space-y-3 flex flex-col items-center py-2">
-                <Label htmlFor="r-otp" className="w-full text-left">6-Digit OTP Code</Label>
+                <Label htmlFor="r-otp" className="w-full text-left">
+                  6-Digit OTP Code
+                </Label>
                 <InputOTP
                   id="r-otp"
                   maxLength={6}
@@ -238,7 +258,12 @@ export default function ResetPasswordPage() {
               </div>
 
               <div className="pt-2">
-                <Button type="submit" disabled={loading || otpToken.length < 6} className="w-full shadow-glow" size="lg">
+                <Button
+                  type="submit"
+                  disabled={loading || otpToken.length < 6}
+                  className="w-full shadow-glow"
+                  size="lg"
+                >
                   {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                   Verify OTP Code
                 </Button>
@@ -282,7 +307,12 @@ export default function ResetPasswordPage() {
               </div>
 
               <div className="pt-2">
-                <Button type="submit" disabled={loading || !password || !confirm} className="w-full shadow-glow" size="lg">
+                <Button
+                  type="submit"
+                  disabled={loading || !password || !confirm}
+                  className="w-full shadow-glow"
+                  size="lg"
+                >
                   {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                   Save New Password
                 </Button>

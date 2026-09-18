@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 export async function compressAndResizeImage(
   file: File,
   maxDimension: number = 400,
-  quality: number = 0.85
+  quality: number = 0.85,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -57,10 +57,7 @@ export async function compressAndResizeImage(
  * Uploads avatar image file or data URL to Supabase Storage 'avatars' bucket.
  * If storage bucket is not configured, seamlessly falls back to storing compressed data URL.
  */
-export async function processAndUploadAvatar(
-  userId: string,
-  file: File
-): Promise<string> {
+export async function processAndUploadAvatar(userId: string, file: File): Promise<string> {
   // 1. Compress image client-side first
   const compressedDataUrl = await compressAndResizeImage(file, 400, 0.85);
 
@@ -68,7 +65,7 @@ export async function processAndUploadAvatar(
     // 2. Try Supabase Storage upload
     const fileExt = file.name.split(".").pop() || "jpg";
     const filePath = `${userId}/avatar_${Date.now()}.${fileExt}`;
-    
+
     // Convert data URL to Blob for storage upload
     const response = await fetch(compressedDataUrl);
     const blob = await response.blob();
@@ -82,9 +79,7 @@ export async function processAndUploadAvatar(
       });
 
     if (!uploadError && uploadData?.path) {
-      const { data: urlData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(uploadData.path);
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(uploadData.path);
 
       if (urlData?.publicUrl) {
         return urlData.publicUrl;

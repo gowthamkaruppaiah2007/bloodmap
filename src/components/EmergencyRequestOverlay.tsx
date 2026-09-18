@@ -12,12 +12,14 @@ import {
   Loader2,
   Building2,
   User,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { haversineKm, formatDistance } from "@/lib/distance";
 import type { BloodRequest } from "@/pages/BloodRequests";
+import InAppChatDrawer from "./InAppChatDrawer";
 
 interface EmergencyRequestOverlayProps {
   request: BloodRequest;
@@ -40,6 +42,25 @@ export default function EmergencyRequestOverlay({
     full_name: string;
     phone: string;
   } | null>(null);
+
+  const [showChatDrawer, setShowChatDrawer] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState<string>("Donor");
+
+  useEffect(() => {
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (u.user) {
+        setCurrentUserId(u.user.id);
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", u.user.id)
+          .maybeSingle();
+        if (p?.full_name) setCurrentUserName(p.full_name);
+      }
+    })();
+  }, []);
 
   // Compute distance if donor location is available
   const distanceKm = donorCoords
@@ -296,14 +317,24 @@ export default function EmergencyRequestOverlay({
                     </div>
                   </div>
 
-                  {requesterContact.phone && (
-                    <a
-                      href={`tel:${requesterContact.phone}`}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all"
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => setShowChatDrawer(true)}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold gap-1 shadow-md"
                     >
-                      <Phone className="w-3.5 h-3.5" /> Call
-                    </a>
-                  )}
+                      <MessageCircle className="w-3.5 h-3.5" /> Live Location & Chat
+                    </Button>
+
+                    {requesterContact.phone && (
+                      <a
+                        href={`tel:${requesterContact.phone}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-accent hover:bg-accent/80 text-foreground text-xs font-bold transition-all border border-border"
+                      >
+                        <Phone className="w-3.5 h-3.5 text-emerald-600" /> Call
+                      </a>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -318,6 +349,19 @@ export default function EmergencyRequestOverlay({
             </div>
           )}
         </div>
+
+        {/* In-App Direct Chat & Live Location Drawer */}
+        {showChatDrawer && currentUserId && (
+          <InAppChatDrawer
+            requestId={request.id}
+            currentUserId={currentUserId}
+            currentUserName={currentUserName}
+            partnerName={requesterContact?.full_name || "Requester"}
+            partnerPhone={requesterContact?.phone}
+            isOpen={showChatDrawer}
+            onClose={() => setShowChatDrawer(false)}
+          />
+        )}
       </div>
     </div>
   );

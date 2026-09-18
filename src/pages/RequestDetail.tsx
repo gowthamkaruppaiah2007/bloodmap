@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   XCircle,
   Heart,
+  Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +23,7 @@ import { buildWhatsAppUrl, formatDistance } from "@/lib/distance";
 import type { Donor } from "@/lib/donors";
 import type { BloodRequest } from "./BloodRequests";
 import Navbar from "@/components/Navbar";
+import InAppChatDrawer from "@/components/InAppChatDrawer";
 
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>();
@@ -43,6 +45,28 @@ export default function RequestDetail() {
       responded_at: string;
     }>
   >([]);
+
+  const [activeChatPartner, setActiveChatPartner] = useState<{
+    partnerName: string;
+    partnerPhone?: string;
+  } | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState<string>("User");
+
+  useEffect(() => {
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (u.user) {
+        setCurrentUserId(u.user.id);
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", u.user.id)
+          .maybeSingle();
+        if (p?.full_name) setCurrentUserName(p.full_name);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     document.title = "AI Donor Matches · BloodMap AI";
@@ -343,18 +367,46 @@ export default function RequestDetail() {
                     </div>
                   </div>
 
-                  {donor.phone && (
-                    <a
-                      href={`tel:${donor.phone}`}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-md transition-all shrink-0"
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        setActiveChatPartner({
+                          partnerName: donor.full_name,
+                          partnerPhone: donor.phone,
+                        })
+                      }
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold gap-1.5 shadow-md"
                     >
-                      <Phone className="w-4 h-4" /> Call Donor
-                    </a>
-                  )}
+                      <MessageCircle className="w-3.5 h-3.5" /> Chat & Live Location
+                    </Button>
+
+                    {donor.phone && (
+                      <a
+                        href={`tel:${donor.phone}`}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent hover:bg-accent/80 text-foreground text-xs font-bold transition-all border border-border"
+                      >
+                        <Phone className="w-3.5 h-3.5 text-emerald-600" /> Call
+                      </a>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           </section>
+        )}
+
+        {/* In-App Direct Chat & Live Location Drawer */}
+        {activeChatPartner && currentUserId && (
+          <InAppChatDrawer
+            requestId={request.id}
+            currentUserId={currentUserId}
+            currentUserName={currentUserName}
+            partnerName={activeChatPartner.partnerName}
+            partnerPhone={activeChatPartner.partnerPhone}
+            isOpen={Boolean(activeChatPartner)}
+            onClose={() => setActiveChatPartner(null)}
+          />
         )}
 
         {/* Request Overview Card */}
